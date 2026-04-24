@@ -48,9 +48,11 @@ class CanvasArea extends StatelessWidget {
                   onChanged();
                 },
                 child: Stack(
+                  clipBehavior: Clip.none,
                   children: [
                     _buildSnapGrid(),
-                    for (final node in editorState.nodes) _buildNode(node),
+                    for (final entry in _flattenCanvasNodes())
+                      _buildNode(entry.node, entry.offset),
                   ],
                 ),
               ),
@@ -72,11 +74,11 @@ class CanvasArea extends StatelessWidget {
     );
   }
 
-  Widget _buildNode(WidgetNode node) {
+  Widget _buildNode(WidgetNode node, Offset offset) {
     final selected = editorState.selectedIds.contains(node.id);
     return Positioned(
-      left: node.x,
-      top: node.y,
+      left: offset.dx,
+      top: offset.dy,
       width: node.width,
       height: node.height,
       child: _DraggableNodeShell(
@@ -102,6 +104,29 @@ class CanvasArea extends StatelessWidget {
       ),
     );
   }
+
+  List<_CanvasNodeEntry> _flattenCanvasNodes() {
+    final entries = <_CanvasNodeEntry>[];
+    void collect(WidgetNode node, Offset parentOffset) {
+      final offset = parentOffset + Offset(node.x, node.y);
+      entries.add(_CanvasNodeEntry(node, offset));
+      for (final child in node.children) {
+        collect(child, offset);
+      }
+    }
+
+    for (final node in editorState.nodes) {
+      collect(node, Offset.zero);
+    }
+    return entries;
+  }
+}
+
+class _CanvasNodeEntry {
+  const _CanvasNodeEntry(this.node, this.offset);
+
+  final WidgetNode node;
+  final Offset offset;
 }
 
 // 단일 노드의 드래그/선택 테두리를 담당한다.

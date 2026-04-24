@@ -13,6 +13,7 @@ class FlutterCodeExporter implements CodeExporter {
     return {
       format.fileName: exportPage(irJson),
       'test_mains/flutter_test_main.dart': _exportTestMain(irJson),
+      'test_mains/run_flutter_test.cmd': _exportRunFlutterTestCmd(),
     };
   }
 
@@ -40,7 +41,7 @@ ${_exportMembers(nodes)}
 
   @override
   Widget build(BuildContext context) {
-    _initializeControls();
+    initialize();
     return Scaffold(
       body: SafeArea(
         child: LayoutBuilder(
@@ -70,8 +71,12 @@ ${nodes.map((node) => _exportPositionedNode(node, 22)).join('\n')}
     );
   }
 
-  void _initializeControls() {
+  void initialize() {
 ${nodes.map((node) => _exportMemberAssignment(node, 4)).join('\n')}
+  }
+
+  void release() {
+    Navigator.of(context).maybePop();
   }
 
   void onButtonPressed(String controlId) {}
@@ -94,6 +99,31 @@ void main() {
 ''';
   }
 
+  String _exportRunFlutterTestCmd() {
+    return r'''
+@echo off
+setlocal
+
+for %%I in ("%~dp0..\..") do set "ROOT=%%~fI\"
+set "APPDATA=%ROOT%.dart-home\AppData"
+set "LOCALAPPDATA=%ROOT%.dart-home\LocalAppData"
+set "PUB_CACHE=%ROOT%.dart-home\PubCache"
+set "FLUTTER_ROOT=%ROOT%.flutter-sdk\flutter"
+
+if not exist "%ROOT%.dart_tool\package_config.json" (
+  "%ROOT%.flutter-sdk\flutter\bin\cache\dart-sdk\bin\dart.exe" ^
+    --packages="%ROOT%.flutter-sdk\flutter\packages\flutter_tools\.dart_tool\package_config.json" ^
+    "%ROOT%.flutter-sdk\flutter\bin\cache\flutter_tools.snapshot" pub get
+)
+
+"%ROOT%.flutter-sdk\flutter\bin\cache\dart-sdk\bin\dart.exe" ^
+  --packages="%ROOT%.flutter-sdk\flutter\packages\flutter_tools\.dart_tool\package_config.json" ^
+  "%ROOT%.flutter-sdk\flutter\bin\cache\flutter_tools.snapshot" run -d windows -t "exports\test_mains\flutter_test_main.dart"
+
+pause
+''';
+  }
+
   String _exportPositionedNode(WidgetNode node, int indent) {
     final space = ' ' * indent;
     final memberName = _memberName(node);
@@ -107,7 +137,9 @@ $space),''';
   }
 
   String _exportMembers(List<WidgetNode> nodes) {
-    final lines = <String>[];
+    final lines = <String>[
+      '  final Map<String, String?> radioGroupValues = <String, String?>{};'
+    ];
     void collect(WidgetNode node) {
       lines.add('  late Widget ${_memberName(node)};');
       for (final child in node.children) {
@@ -127,23 +159,88 @@ $space),''';
     for (final child in node.children) {
       lines.add(_exportMemberAssignment(child, indent));
     }
+    if (node.type == 'radioButton') {
+      lines.add(_exportRadioDefault(node, indent));
+    }
     lines.add('$space${_memberName(node)} = ${_exportWidget(node, indent)};');
     return lines.join('\n');
   }
 
   String _exportWidget(WidgetNode node, int indent) {
     switch (node.type) {
-      case WidgetNodeType.text:
+      case 'text':
         return _exportText(node, indent);
-      case WidgetNodeType.button:
+      case 'button':
         return _exportButton(node, indent);
-      case WidgetNodeType.container:
+      case 'container':
+      case 'groupBox':
+      case 'tabs':
+      case 'scrollArea':
         return _exportContainer(node, indent);
-      case WidgetNodeType.row:
+      case 'row':
         return _exportFlex(node, indent, 'Row');
-      case WidgetNodeType.column:
+      case 'column':
         return _exportFlex(node, indent, 'Column');
+      case 'radioButton':
+        return _exportRadio(node, indent);
+      case 'checkBox':
+      case 'spinBox':
+      case 'doubleSpinBox':
+      case 'comboBox':
+      case 'textBox':
+      case 'lineEdit':
+      case 'listBox':
+      case 'progressBar':
+      case 'horizontalSlider':
+      case 'verticalSlider':
+      case 'table':
+      case 'image':
+        return _exportSimple(node, indent, node.type);
+      default:
+        return _exportSimple(node, indent, node.type);
     }
+  }
+
+  String _exportRadioDefault(WidgetNode node, int indent) {
+    final space = ' ' * indent;
+    final groupName = _quote(_radioGroupName(node));
+    final value = _quote(_radioValue(node));
+    final selected = node.props['selected'] == true;
+    return selected
+        ? '${space}radioGroupValues.putIfAbsent($groupName, () => $value);'
+        : '${space}radioGroupValues.putIfAbsent($groupName, () => null);';
+  }
+
+  String _exportRadio(WidgetNode node, int indent) {
+    final space = ' ' * indent;
+    final groupName = _quote(_radioGroupName(node));
+    final value = _quote(_radioValue(node));
+    final text = _quote(node.props['text']?.toString() ?? 'Radio');
+    return '''RadioGroup<String>(
+$space  groupValue: radioGroupValues[$groupName],
+$space  onChanged: (value) => setState(() => radioGroupValues[$groupName] = value),
+$space  child: Row(
+$space    children: [
+$space      SizedBox(
+$space        width: 32,
+$space        height: 32,
+$space        child: Radio<String>(value: $value),
+$space      ),
+$space      Expanded(child: Text($text, overflow: TextOverflow.ellipsis)),
+$space    ],
+$space  ),
+$space)''';
+  }
+
+  String _exportSimple(WidgetNode node, int indent, String label) {
+    final space = ' ' * indent;
+    final text = _quote(node.props['text']?.toString() ?? label);
+    return '''Container(
+$space  alignment: Alignment.centerLeft,
+$space  padding: const EdgeInsets.all(8),
+$space  decoration: BoxDecoration(border: Border.all(color: const Color(0xFFCBD5E1))),
+$space  child: Text($text),
+$space)''';
   }
 
   String _exportText(WidgetNode node, int indent) {
@@ -186,7 +283,7 @@ $space      borderRadius: BorderRadius.circular($radius),
 $space    ),
 $space  ),
 $space  onPressed: () => onButtonPressed(${_quote(node.id)}),
-$space  child: Text($text),
+$space  child: FittedBox(fit: BoxFit.scaleDown, child: Text($text)),
 $space)''';
   }
 
@@ -288,12 +385,24 @@ $space)''';
   }
 
   String _memberName(WidgetNode node) {
-    final raw = node.props['name']?.toString() ?? node.id;
+    final raw = node.props['memberName']?.toString() ??
+        node.props['name']?.toString() ??
+        node.id;
     final compact = raw.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '_');
     final safe = compact.isEmpty ? node.id : compact;
     final prefixed = RegExp(r'^[0-9]').hasMatch(safe) ? 'control_$safe' : safe;
     return '${prefixed}Control';
   }
+
+  String _radioGroupName(WidgetNode node) =>
+      node.props['groupName']?.toString().isNotEmpty == true
+          ? node.props['groupName'].toString()
+          : 'default';
+
+  String _radioValue(WidgetNode node) =>
+      node.props['radioValue']?.toString().isNotEmpty == true
+          ? node.props['radioValue'].toString()
+          : node.id;
 
   String _formatNumber(dynamic value) {
     final number = value is num

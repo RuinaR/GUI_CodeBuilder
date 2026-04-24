@@ -6,32 +6,72 @@ import '../models/widget_node.dart';
 class CanvasWidgetRenderer {
   Widget buildPreview(WidgetNode node) {
     switch (node.type) {
-      case WidgetNodeType.text:
+      case 'text':
         return _buildText(node);
-      case WidgetNodeType.button:
+      case 'button':
         return _buildButton(node);
-      case WidgetNodeType.container:
+      case 'radioButton':
+        return _labeledBox(
+          node,
+          Icon(
+            node.props['selected'] == true
+                ? Icons.radio_button_checked
+                : Icons.radio_button_unchecked,
+            size: 20,
+          ),
+          trailing: '[${node.props['groupName'] ?? 'default'}]',
+        );
+      case 'checkBox':
+        return _labeledBox(node,
+            Checkbox(value: node.props['checked'] == true, onChanged: (_) {}));
+      case 'spinBox':
+      case 'doubleSpinBox':
+      case 'lineEdit':
+        return _inputLike(
+            node,
+            node.props['placeholder']?.toString() ??
+                node.props['value']?.toString() ??
+                '');
+      case 'comboBox':
+        return _comboLike(node);
+      case 'textBox':
+        return _inputLike(node, node.props['text']?.toString() ?? '',
+            multiline: true);
+      case 'listBox':
+        return _listLike(node);
+      case 'progressBar':
+        return LinearProgressIndicator(value: _ratio(node));
+      case 'horizontalSlider':
+        return Slider(value: _ratio(node), onChanged: (_) {});
+      case 'verticalSlider':
+        return RotatedBox(
+            quarterTurns: 3,
+            child: Slider(value: _ratio(node), onChanged: (_) {}));
+      case 'table':
+        return _tableLike(node);
+      case 'image':
+        return _imageLike(node);
+      case 'groupBox':
+      case 'tabs':
+      case 'scrollArea':
+      case 'container':
         return _buildContainer(node);
-      case WidgetNodeType.row:
+      case 'row':
         return _buildFlex(node, Axis.horizontal);
-      case WidgetNodeType.column:
+      case 'column':
         return _buildFlex(node, Axis.vertical);
+      default:
+        return _inputLike(node, node.displayName);
     }
   }
 
   Widget _buildText(WidgetNode node) {
-    final align = switch (node.props['textAlign']?.toString()) {
-      'center' => TextAlign.center,
-      'right' => TextAlign.right,
-      _ => TextAlign.left,
-    };
     return Align(
       alignment: Alignment.centerLeft,
       child: Text(
-        node.props['text']?.toString() ?? '',
+        node.props['text']?.toString() ?? node.props['name']?.toString() ?? '',
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        textAlign: align,
         style: TextStyle(
           fontSize: _readDouble(node.props['fontSize'], 16),
           fontFamily: node.props['fontFamily']?.toString(),
@@ -49,48 +89,40 @@ class CanvasWidgetRenderer {
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: _readColor(
-            node.props['backgroundColor'],
-            const Color(0xFF2563EB),
-          ),
-          foregroundColor: _readColor(
-            node.props['foregroundColor'],
-            Colors.white,
-          ),
-          textStyle: TextStyle(
-            fontSize: _readDouble(node.props['fontSize'], 14),
-            fontFamily: node.props['fontFamily']?.toString(),
-          ),
+              node.props['backgroundColor'], const Color(0xFF2563EB)),
+          foregroundColor:
+              _readColor(node.props['foregroundColor'], Colors.white),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(
-              _readDouble(node.props['borderRadius'], 6),
-            ),
-          ),
+              borderRadius: BorderRadius.circular(
+                  _readDouble(node.props['borderRadius'], 6))),
         ),
         onPressed: () {},
-        child: Text(
-          node.props['text']?.toString() ?? 'Button',
-          overflow: TextOverflow.ellipsis,
-        ),
+        child: Text(node.props['text']?.toString() ?? 'Button',
+            overflow: TextOverflow.ellipsis),
       ),
     );
   }
 
   Widget _buildContainer(WidgetNode node) {
+    final title = node.props['title']?.toString();
+    final child = title == null || title.isEmpty
+        ? const SizedBox.expand()
+        : Align(
+            alignment: Alignment.topLeft,
+            child: Text(title,
+                style: const TextStyle(fontWeight: FontWeight.w700)));
     return Container(
-      padding: EdgeInsets.all(_readDouble(node.props['padding'], 0)),
+      padding: EdgeInsets.all(_readDouble(node.props['padding'], 8)),
       decoration: BoxDecoration(
-        color: _readColor(
-          node.props['backgroundColor'],
-          const Color(0xFFF8FAFC),
-        ),
+        color:
+            _readColor(node.props['backgroundColor'], const Color(0xFFF8FAFC)),
         border: Border.all(
-          color: _readColor(node.props['borderColor'], const Color(0xFF94A3B8)),
-        ),
-        borderRadius: BorderRadius.circular(
-          _readDouble(node.props['borderRadius'], 6),
-        ),
+            color:
+                _readColor(node.props['borderColor'], const Color(0xFF94A3B8))),
+        borderRadius:
+            BorderRadius.circular(_readDouble(node.props['borderRadius'], 6)),
       ),
-      child: const SizedBox.expand(),
+      child: child,
     );
   }
 
@@ -103,65 +135,78 @@ class CanvasWidgetRenderer {
           color: _readColor(node.props['borderColor'], const Color(0xFFCBD5E1)),
         ),
       ),
-      child: direction == Axis.horizontal
-          ? Row(
-              mainAxisAlignment: _mainAxis(node.props['mainAxisAlignment']),
-              crossAxisAlignment: _crossAxis(node.props['crossAxisAlignment']),
-              children: _buildFlexChildren(node, Axis.horizontal),
-            )
-          : Column(
-              mainAxisAlignment: _mainAxis(node.props['mainAxisAlignment']),
-              crossAxisAlignment: _crossAxis(node.props['crossAxisAlignment']),
-              children: _buildFlexChildren(node, Axis.vertical),
-            ),
+      alignment: Alignment.topLeft,
+      child: Text(
+        direction == Axis.horizontal ? 'Row' : 'Column',
+        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+      ),
     );
   }
 
-  List<Widget> _buildFlexChildren(WidgetNode node, Axis direction) {
-    final children = <Widget>[];
-    final gap = _readDouble(node.props['gap'], 8);
-    for (var i = 0; i < node.children.length; i += 1) {
-      final child = node.children[i];
-      children.add(
-        SizedBox(
-          width: child.width,
-          height: child.height,
-          child: buildPreview(child),
+  Widget _labeledBox(WidgetNode node, Widget control, {String? trailing}) {
+    return Row(children: [
+      control,
+      Expanded(
+        child: Text(
+          trailing == null
+              ? (node.props['text']?.toString() ?? node.displayName)
+              : '${node.props['text']?.toString() ?? node.displayName} $trailing',
+          overflow: TextOverflow.ellipsis,
         ),
-      );
-      if (i < node.children.length - 1) {
-        children.add(
-          direction == Axis.horizontal
-              ? SizedBox(width: gap)
-              : SizedBox(height: gap),
-        );
-      }
-    }
-    return children;
+      ),
+    ]);
   }
 
-  MainAxisAlignment _mainAxis(dynamic value) {
-    return switch (value?.toString()) {
-      'center' => MainAxisAlignment.center,
-      'end' => MainAxisAlignment.end,
-      'spaceBetween' => MainAxisAlignment.spaceBetween,
-      _ => MainAxisAlignment.start,
-    };
+  Widget _inputLike(WidgetNode node, String text, {bool multiline = false}) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      alignment: multiline ? Alignment.topLeft : Alignment.centerLeft,
+      decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFCBD5E1)),
+          color: Colors.white),
+      child: Text(text, overflow: TextOverflow.ellipsis),
+    );
   }
 
-  CrossAxisAlignment _crossAxis(dynamic value) {
-    return switch (value?.toString()) {
-      'center' => CrossAxisAlignment.center,
-      'end' => CrossAxisAlignment.end,
-      'stretch' => CrossAxisAlignment.stretch,
-      _ => CrossAxisAlignment.start,
-    };
+  Widget _comboLike(WidgetNode node) =>
+      _inputLike(node, '${node.props['value'] ?? 'Select'}  v');
+
+  Widget _listLike(WidgetNode node) {
+    final items = _items(node).take(4).join('\\n');
+    return _inputLike(node, items, multiline: true);
+  }
+
+  Widget _tableLike(WidgetNode node) {
+    return Container(
+      decoration:
+          BoxDecoration(border: Border.all(color: const Color(0xFFCBD5E1))),
+      child: const Center(child: Text('Table')),
+    );
+  }
+
+  Widget _imageLike(WidgetNode node) {
+    return Container(
+      color: const Color(0xFFE5E7EB),
+      alignment: Alignment.center,
+      child: Text(node.props['text']?.toString() ?? 'Image'),
+    );
+  }
+
+  List<String> _items(WidgetNode node) =>
+      (node.props['items']?.toString() ?? '')
+          .split(',')
+          .where((item) => item.trim().isNotEmpty)
+          .toList();
+
+  double _ratio(WidgetNode node) {
+    final value = _readDouble(node.props['value'], 0);
+    final max = _readDouble(node.props['max'], 100);
+    if (max <= 0) return 0;
+    return (value / max).clamp(0, 1).toDouble();
   }
 
   double _readDouble(dynamic value, double fallback) {
-    if (value is num) {
-      return value.toDouble();
-    }
+    if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '') ?? fallback;
   }
 

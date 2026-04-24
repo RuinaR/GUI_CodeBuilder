@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/editor_state.dart';
+import '../models/widget_definition.dart';
 import '../models/widget_node.dart';
 
 // 선택된 노드와 캔버스의 속성을 편집한다.
@@ -8,17 +9,19 @@ class PropertyPanel extends StatelessWidget {
   const PropertyPanel({
     required this.editorState,
     required this.onChanged,
+    required this.width,
     super.key,
   });
 
   final EditorState editorState;
   final VoidCallback onChanged;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
     final node = editorState.primarySelectedNode;
     return Container(
-      width: 330,
+      width: width,
       color: Colors.white,
       padding: const EdgeInsets.all(12),
       child: ListView(
@@ -40,6 +43,12 @@ class PropertyPanel extends StatelessWidget {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
+        _textField('class name', editorState.pageClassName, (value) {
+          editorState.pageClassName = value.isEmpty ? 'GeneratedPage' : value;
+        }),
+        _textField('page title', editorState.pageTitle, (value) {
+          editorState.pageTitle = value.isEmpty ? 'Generated Page' : value;
+        }),
         _numberField('canvas width', editorState.canvasWidth, (value) {
           editorState.canvasWidth = value.clamp(320, 4000);
         }),
@@ -52,6 +61,7 @@ class PropertyPanel extends StatelessWidget {
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text('Responsive preview'),
+          subtitle: const Text('미리보기와 export IR에서 화면 크기 대응 여부를 표시합니다.'),
           value: editorState.responsivePreview,
           onChanged: (value) {
             editorState.responsivePreview = value;
@@ -77,6 +87,7 @@ class PropertyPanel extends StatelessWidget {
   }
 
   Widget _buildNodePanel(WidgetNode node) {
+    final definition = definitionFor(node.type);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -86,7 +97,7 @@ class PropertyPanel extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          '${node.type.name} / ${node.id}',
+          '${definition.label} / ${node.id}',
           style: const TextStyle(color: Color(0xFF6B7280)),
         ),
         const SizedBox(height: 12),
@@ -113,6 +124,7 @@ class PropertyPanel extends StatelessWidget {
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text('Responsive'),
+          subtitle: const Text('이 위젯을 반응형 대상으로 표시합니다.'),
           value: node.responsive,
           onChanged: (value) {
             node.responsive = value;
@@ -123,101 +135,56 @@ class PropertyPanel extends StatelessWidget {
         _textField('name', node.props['name']?.toString() ?? node.id, (value) {
           editorState.updateNodeProp(node, 'name', value);
         }),
-        if (_hasText(node)) ...[
-          _textField('text', node.props['text']?.toString() ?? '', (value) {
-            editorState.updateNodeProp(node, 'text', value);
-          }),
-          _numberField('font size', _readDouble(node.props['fontSize'], 16), (
-            value,
-          ) {
-            editorState.updateNodeProp(node, 'fontSize', value);
-          }),
-          _textField(
-            'font family',
-            node.props['fontFamily']?.toString() ?? 'Arial',
-            (value) => editorState.updateNodeProp(node, 'fontFamily', value),
-          ),
-          _choiceField(
-              'font weight',
-              node.props['fontWeight'],
-              [
-                'normal',
-                'bold',
-              ],
-              (value) => editorState.updateNodeProp(node, 'fontWeight', value)),
-        ],
-        if (node.type == WidgetNodeType.text)
-          _textField('text color', node.props['color']?.toString() ?? '#111827',
-              (value) {
-            editorState.updateNodeProp(node, 'color', value);
-          }),
-        if (node.type != WidgetNodeType.text) ...[
-          _textField(
-            'background color',
-            node.props['backgroundColor']?.toString() ?? '#FFFFFF',
-            (value) => editorState.updateNodeProp(
-              node,
-              'backgroundColor',
-              value,
-            ),
-          ),
-          _textField(
-            'border color',
-            node.props['borderColor']?.toString() ?? '#CBD5E1',
-            (value) => editorState.updateNodeProp(node, 'borderColor', value),
-          ),
-        ],
-        if (node.type == WidgetNodeType.button)
-          _textField(
-            'foreground color',
-            node.props['foregroundColor']?.toString() ?? '#FFFFFF',
-            (value) => editorState.updateNodeProp(
-              node,
-              'foregroundColor',
-              value,
-            ),
-          ),
-        if (node.canHaveChildren) ...[
-          _numberField('padding', _readDouble(node.props['padding'], 0), (
-            value,
-          ) {
-            editorState.updateNodeProp(node, 'padding', value);
-          }),
-          if (node.type != WidgetNodeType.container)
-            _numberField('gap', _readDouble(node.props['gap'], 8), (value) {
-              editorState.updateNodeProp(node, 'gap', value);
-            }),
-          if (node.type != WidgetNodeType.container) ...[
-            _choiceField(
-              'main axis',
-              node.props['mainAxisAlignment'],
-              ['start', 'center', 'end', 'spaceBetween'],
-              (value) =>
-                  editorState.updateNodeProp(node, 'mainAxisAlignment', value),
-            ),
-            _choiceField(
-              'cross axis',
-              node.props['crossAxisAlignment'],
-              ['start', 'center', 'end', 'stretch'],
-              (value) =>
-                  editorState.updateNodeProp(node, 'crossAxisAlignment', value),
-            ),
-          ],
-        ],
-        if (node.type == WidgetNodeType.container ||
-            node.type == WidgetNodeType.button)
-          _numberField(
-            'border radius',
-            _readDouble(node.props['borderRadius'], 6),
-            (value) => editorState.updateNodeProp(node, 'borderRadius', value),
-          ),
+        _textField(
+          'member variable',
+          node.props['memberName']?.toString() ?? node.id,
+          (value) => editorState.updateNodeProp(node, 'memberName', value),
+        ),
+        for (final property in definition.properties)
+          _propertyField(node, property),
       ],
     );
   }
 
-  bool _hasText(WidgetNode node) {
-    return node.type == WidgetNodeType.text ||
-        node.type == WidgetNodeType.button;
+  Widget _propertyField(WidgetNode node, WidgetPropertyDefinition property) {
+    final rawValue = node.props[property.key] ?? property.fallback ?? '';
+    switch (property.kind) {
+      case WidgetPropertyKind.number:
+        return _numberField(property.label, _readDouble(rawValue, 0), (value) {
+          editorState.updateNodeProp(node, property.key, value);
+        });
+      case WidgetPropertyKind.boolean:
+        return SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(property.label),
+          value:
+              rawValue == true || rawValue.toString().toLowerCase() == 'true',
+          onChanged: (value) {
+            editorState.updateNodeProp(node, property.key, value);
+            onChanged();
+          },
+        );
+      case WidgetPropertyKind.choice:
+        return _choiceField(
+          property.label,
+          rawValue,
+          property.choices,
+          (value) => editorState.updateNodeProp(node, property.key, value),
+        );
+      case WidgetPropertyKind.multilineText:
+        return _textField(
+          property.label,
+          rawValue.toString(),
+          (value) => editorState.updateNodeProp(node, property.key, value),
+          minLines: 3,
+        );
+      case WidgetPropertyKind.text:
+        return _textField(
+          property.label,
+          rawValue.toString(),
+          (value) => editorState.updateNodeProp(node, property.key, value),
+        );
+    }
   }
 
   Widget _choiceField(
@@ -268,7 +235,7 @@ class PropertyPanel extends StatelessWidget {
           border: const OutlineInputBorder(),
         ),
         keyboardType: TextInputType.number,
-        onSubmitted: (text) {
+        onChanged: (text) {
           final parsed = double.tryParse(text);
           if (parsed != null) {
             onValueChanged(parsed);
@@ -282,8 +249,9 @@ class PropertyPanel extends StatelessWidget {
   Widget _textField(
     String label,
     String value,
-    ValueChanged<String> onValueChanged,
-  ) {
+    ValueChanged<String> onValueChanged, {
+    int minLines = 1,
+  }) {
     final controller = TextEditingController(text: value);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -294,7 +262,9 @@ class PropertyPanel extends StatelessWidget {
           isDense: true,
           border: const OutlineInputBorder(),
         ),
-        onSubmitted: (text) {
+        minLines: minLines,
+        maxLines: minLines == 1 ? 1 : 6,
+        onChanged: (text) {
           onValueChanged(text);
           onChanged();
         },

@@ -1,16 +1,16 @@
+import 'widget_definition.dart';
 import 'widget_node.dart';
 
 // 편집기의 선택, 트리, 배치 규칙을 관리한다.
 class EditorState {
-  EditorState() {
-    addNode(WidgetNodeType.text);
-    addNode(WidgetNodeType.button);
-  }
+  EditorState();
 
   final List<WidgetNode> nodes = <WidgetNode>[];
   final Set<String> selectedIds = <String>{};
   String exportedJson = '';
   final Map<String, String> exportedCodes = <String, String>{};
+  String pageClassName = 'GeneratedPage';
+  String pageTitle = 'Generated Page';
 
   int _nextId = 1;
   double canvasWidth = 960;
@@ -18,6 +18,10 @@ class EditorState {
   double snapSize = 8;
   bool snapEnabled = true;
   bool responsivePreview = true;
+  String? treeInsertParentId;
+  final List<Map<String, dynamic>> _undoStack = <Map<String, dynamic>>[];
+
+  bool get canUndo => _undoStack.isNotEmpty;
 
   List<WidgetNode> get selectedNodes {
     return selectedIds.map(findNodeById).whereType<WidgetNode>().toList();
@@ -31,11 +35,17 @@ class EditorState {
   }
 
   // 팔레트에서 새 노드를 만들고 선택 상태로 전환한다.
-  WidgetNode addNode(WidgetNodeType type, {String? parentId}) {
+  WidgetNode addNode(String type, {String? parentId}) {
+    _pushUndo();
     final node = _createDefaultNode(type);
-    final parentNode = parentId == null ? null : findNodeById(parentId);
+    final resolvedParentId = parentId ?? treeInsertParentId;
+    final parentNode =
+        resolvedParentId == null ? null : findNodeById(resolvedParentId);
 
     if (parentNode != null && parentNode.canHaveChildren) {
+      final childIndex = parentNode.children.length;
+      node.x = _snap(16 + (childIndex * 16) % 160);
+      node.y = _snap(32 + (childIndex * 18) % 120);
       parentNode.children.add(node);
     } else {
       nodes.add(node);
@@ -65,8 +75,24 @@ class EditorState {
     selectedIds.clear();
   }
 
+  // 트리에서 루트를 선택하면 새 노드는 루트에 추가된다.
+  void selectRootForInsert() {
+    treeInsertParentId = null;
+    clearSelection();
+  }
+
+  // 트리에서 컨테이너 노드를 선택하면 새 노드는 해당 노드의 자식으로 추가된다.
+  void selectTreeNodeForInsert(String id) {
+    selectOnly(id);
+    final node = findNodeById(id);
+    if (node != null && node.canHaveChildren) {
+      treeInsertParentId = id;
+    }
+  }
+
   // 선택된 노드를 스냅 규칙에 맞춰 이동한다.
   void moveSelected(double deltaX, double deltaY) {
+    _pushUndo();
     for (final node in selectedNodes) {
       node.x = _snap(node.x + deltaX);
       node.y = _snap(node.y + deltaY);
@@ -75,11 +101,13 @@ class EditorState {
 
   // 선택 노드의 크기를 변경한다.
   void resizeNode(WidgetNode node, double deltaX, double deltaY) {
+    _pushUndo();
     node.width = _snap((node.width + deltaX).clamp(24, 4000));
     node.height = _snap((node.height + deltaY).clamp(24, 4000));
   }
 
   void updateNodeProp(WidgetNode node, String key, dynamic value) {
+    _pushUndo();
     node.props[key] = value;
   }
 
@@ -107,6 +135,7 @@ class EditorState {
 
   // 선택된 모든 노드를 같은 부모 아래에 복제한다.
   void duplicateSelected() {
+    _pushUndo();
     final copiedNodes = <WidgetNode>[];
     for (final node in selectedNodes) {
       final parent = findParentOf(node.id);
@@ -126,6 +155,7 @@ class EditorState {
 
   // 선택된 노드를 트리에서 제거한다.
   void deleteSelected() {
+    _pushUndo();
     final ids = selectedIds.toList();
     for (final id in ids) {
       _removeNodeById(nodes, id);
@@ -135,6 +165,7 @@ class EditorState {
 
   // 선택된 노드를 부모 컨테이너 아래로 이동한다.
   bool moveSelectionToParent(String? parentId) {
+    _pushUndo();
     final moving = selectedNodes.where((node) => node.id != parentId).toList();
     if (moving.isEmpty) {
       return false;
@@ -162,6 +193,7 @@ class EditorState {
 
   // 선택 노드를 부모의 앞뒤 순서 안에서 이동한다.
   void reorderNode(String id, int direction) {
+    _pushUndo();
     final siblings = _findSiblingList(id, nodes);
     if (siblings == null) {
       return;
@@ -177,6 +209,7 @@ class EditorState {
 
   // 선택된 노드를 기준선에 맞춰 정렬한다.
   void alignSelected(String mode) {
+    _pushUndo();
     final items = selectedNodes;
     if (items.length < 2) {
       return;
@@ -217,6 +250,44 @@ class EditorState {
     }
   }
 
+  // 단일 노드를 지정한 부모 아래로 옮긴다.
+  bool moveNodeToParent(String nodeId, String? parentId) {
+    if (nodeId == parentId) {
+      return false;
+    }
+    final node = findNodeById(nodeId);
+    final parent = parentId == null ? null : findNodeById(parentId);
+    if (node == null || (parent != null && !parent.canHaveChildren)) {
+      return false;
+    }
+    if (parent != null && _containsNode(node, parent.id)) {
+      return false;
+    }
+    _pushUndo();
+    _removeNodeById(nodes, node.id);
+    if (parent == null) {
+      nodes.add(node);
+      treeInsertParentId = null;
+    } else {
+      node.x = _snap(16 + (parent.children.length * 16) % 160);
+      node.y = _snap(32 + (parent.children.length * 18) % 120);
+      parent.children.add(node);
+      treeInsertParentId = parent.id;
+    }
+    selectOnly(node.id);
+    return true;
+  }
+
+  // 마지막 편집 전 상태로 되돌린다.
+  bool undo() {
+    if (_undoStack.isEmpty) {
+      return false;
+    }
+    final snapshot = _undoStack.removeLast();
+    _restoreSnapshot(snapshot);
+    return true;
+  }
+
   WidgetNode? findNodeById(String id) {
     return _findNodeById(nodes, id);
   }
@@ -231,17 +302,18 @@ class EditorState {
       'schemaVersion': 3,
       'generator': {
         'name': 'GUI Code Builder',
-        'irPurpose': 'single source for Flutter, Flet, and PyQt exporters',
+        'irPurpose':
+            'single source for Flutter, Flet, PyQt, and HTML/CSS exporters',
       },
       'page': {
-        'className': 'GeneratedPage',
-        'title': 'Generated Page',
+        'className': pageClassName,
+        'title': pageTitle,
         'width': canvasWidth,
         'height': canvasHeight,
         'responsive': responsivePreview,
         'coordinateSystem': 'logicalPixels',
       },
-      'exportTargets': ['flutter', 'flet', 'pyqt'],
+      'exportTargets': ['flutter', 'flet', 'pyqt', 'html'],
       'nodes': nodes.map((node) => node.toJson()).toList(),
     };
   }
@@ -249,6 +321,8 @@ class EditorState {
   // JSON IR을 편집 상태로 불러온다.
   void loadIrJson(Map<String, dynamic> json) {
     final page = Map<String, dynamic>.from(json['page'] ?? <String, dynamic>{});
+    pageClassName = page['className']?.toString() ?? 'GeneratedPage';
+    pageTitle = page['title']?.toString() ?? 'Generated Page';
     canvasWidth = _readDouble(page['width'], 960);
     canvasHeight = _readDouble(page['height'], 640);
     responsivePreview = _readBool(page['responsive'], true);
@@ -264,98 +338,47 @@ class EditorState {
     _nextId = _collectMaxId(nodes) + 1;
   }
 
-  WidgetNode _createDefaultNode(WidgetNodeType type) {
-    final id = _createId();
-    switch (type) {
-      case WidgetNodeType.text:
-        return WidgetNode(
-          id: id,
-          type: type,
-          x: 80,
-          y: 80,
-          width: 180,
-          height: 48,
-          props: {
-            'name': id,
-            'text': 'Hello',
-            'fontSize': 22,
-            'fontFamily': 'Arial',
-            'fontWeight': 'normal',
-            'color': '#111827',
-            'textAlign': 'left',
-            'responsive': true,
-          },
-        );
-      case WidgetNodeType.button:
-        return WidgetNode(
-          id: id,
-          type: type,
-          x: 120,
-          y: 160,
-          width: 160,
-          height: 48,
-          props: {
-            'name': id,
-            'text': 'Button',
-            'fontSize': 14,
-            'fontFamily': 'Arial',
-            'backgroundColor': '#2563EB',
-            'foregroundColor': '#FFFFFF',
-            'borderRadius': 6,
-            'responsive': true,
-          },
-        );
-      case WidgetNodeType.container:
-        return WidgetNode(
-          id: id,
-          type: type,
-          x: 80,
-          y: 240,
-          width: 240,
-          height: 150,
-          props: {
-            'name': id,
-            'backgroundColor': '#F8FAFC',
-            'borderColor': '#94A3B8',
-            'borderRadius': 6,
-            'padding': 8,
-            'responsive': true,
-          },
-        );
-      case WidgetNodeType.row:
-        return WidgetNode(
-          id: id,
-          type: type,
-          x: 360,
-          y: 100,
-          width: 320,
-          height: 110,
-          props: _defaultFlexProps(id),
-        );
-      case WidgetNodeType.column:
-        return WidgetNode(
-          id: id,
-          type: type,
-          x: 360,
-          y: 240,
-          width: 260,
-          height: 200,
-          props: _defaultFlexProps(id),
-        );
+  void _pushUndo() {
+    _undoStack.add(toIrJson());
+    if (_undoStack.length > 80) {
+      _undoStack.removeAt(0);
     }
   }
 
-  Map<String, dynamic> _defaultFlexProps(String id) {
-    return {
-      'name': id,
-      'backgroundColor': '#FFFFFF',
-      'borderColor': '#CBD5E1',
-      'gap': 8,
-      'padding': 8,
-      'mainAxisAlignment': 'start',
-      'crossAxisAlignment': 'start',
-      'responsive': true,
-    };
+  void _restoreSnapshot(Map<String, dynamic> snapshot) {
+    final page = Map<String, dynamic>.from(
+      snapshot['page'] ?? <String, dynamic>{},
+    );
+    pageClassName = page['className']?.toString() ?? 'GeneratedPage';
+    pageTitle = page['title']?.toString() ?? 'Generated Page';
+    canvasWidth = _readDouble(page['width'], 960);
+    canvasHeight = _readDouble(page['height'], 640);
+    responsivePreview = _readBool(page['responsive'], true);
+    nodes
+      ..clear()
+      ..addAll(
+        (snapshot['nodes'] as List? ?? <dynamic>[]).whereType<Map>().map(
+              (nodeJson) =>
+                  WidgetNode.fromJson(Map<String, dynamic>.from(nodeJson)),
+            ),
+      );
+    selectedIds.clear();
+    treeInsertParentId = null;
+    _nextId = _collectMaxId(nodes) + 1;
+  }
+
+  WidgetNode _createDefaultNode(String type) {
+    final id = _createId();
+    final definition = definitionFor(type);
+    return WidgetNode(
+      id: id,
+      type: type,
+      x: 80 + (nodes.length * 24) % 360,
+      y: 80 + (nodes.length * 32) % 280,
+      width: definition.defaultWidth,
+      height: definition.defaultHeight,
+      props: definition.defaultProps(id),
+    );
   }
 
   String _createId() {

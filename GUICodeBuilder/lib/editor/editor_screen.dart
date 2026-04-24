@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../exporters/code_exporter.dart';
 import '../exporters/flet_code_exporter.dart';
 import '../exporters/flutter_code_exporter.dart';
+import '../exporters/html_css_exporter.dart';
 import '../exporters/pyqt_code_exporter.dart';
 import '../models/editor_state.dart';
 import '../models/export_format.dart';
-import '../models/widget_node.dart';
 import '../renderers/canvas_widget_renderer.dart';
 import '../services/json_document_service.dart';
 import 'canvas_area.dart';
 import 'property_panel.dart';
+import 'resize_handle.dart';
 import 'widget_palette.dart';
 import 'widget_tree_panel.dart';
 
@@ -30,34 +32,124 @@ class _EditorScreenState extends State<EditorScreen> {
     FlutterCodeExporter(),
     FletCodeExporter(),
     PyQtCodeExporter(),
+    HtmlCssExporter(),
   ];
 
   ExportFormat _previewFormat = ExportFormat.flutter;
+  double _leftPaneWidth = 320;
+  double _rightPaneWidth = 340;
+  double _exportPreviewHeight = 190;
+  double _treePaneHeight = 320;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          _buildToolbar(),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                WidgetPalette(onAddNode: _addNode),
-                CanvasArea(
-                  editorState: _editorState,
-                  renderer: _renderer,
-                  onChanged: _refresh,
-                ),
-                PropertyPanel(editorState: _editorState, onChanged: _refresh),
-              ],
-            ),
-          ),
-          WidgetTreePanel(editorState: _editorState, onChanged: _refresh),
-          _buildExportPreview(),
-        ],
+    return KeyboardListener(
+      focusNode: FocusNode(),
+      autofocus: true,
+      onKeyEvent: _handleKeyEvent,
+      child: Scaffold(
+        body: Column(
+          children: [
+            _buildToolbar(),
+            Expanded(child: _buildEditorWorkspace()),
+            if (_editorState.exportedJson.isNotEmpty ||
+                _editorState.exportedCodes.isNotEmpty)
+              ResizeHandle(
+                axis: Axis.vertical,
+                onDrag: (delta) {
+                  setState(() {
+                    _exportPreviewHeight =
+                        (_exportPreviewHeight - delta.dy).clamp(120, 420);
+                  });
+                },
+              ),
+            _buildExportPreview(),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildEditorWorkspace() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxLeft = (constraints.maxWidth - _rightPaneWidth - 260).clamp(
+          220,
+          520,
+        );
+        final maxRight = (constraints.maxWidth - _leftPaneWidth - 260).clamp(
+          260,
+          560,
+        );
+        _leftPaneWidth = _leftPaneWidth.clamp(240, maxLeft.toDouble());
+        _rightPaneWidth = _rightPaneWidth.clamp(280, maxRight.toDouble());
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(width: _leftPaneWidth, child: _buildLeftPane()),
+            ResizeHandle(
+              axis: Axis.horizontal,
+              onDrag: (delta) {
+                setState(() {
+                  _leftPaneWidth = (_leftPaneWidth + delta.dx).clamp(240, 520);
+                });
+              },
+            ),
+            CanvasArea(
+              editorState: _editorState,
+              renderer: _renderer,
+              onChanged: _refresh,
+            ),
+            ResizeHandle(
+              axis: Axis.horizontal,
+              onDrag: (delta) {
+                setState(() {
+                  _rightPaneWidth =
+                      (_rightPaneWidth - delta.dx).clamp(280, 560);
+                });
+              },
+            ),
+            PropertyPanel(
+              editorState: _editorState,
+              onChanged: _refresh,
+              width: _rightPaneWidth,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildLeftPane() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _treePaneHeight =
+            _treePaneHeight.clamp(180, constraints.maxHeight - 180);
+        return Column(
+          children: [
+            Expanded(child: WidgetPalette(onAddNode: _addNode)),
+            ResizeHandle(
+              axis: Axis.vertical,
+              onDrag: (delta) {
+                setState(() {
+                  _treePaneHeight = (_treePaneHeight - delta.dy).clamp(
+                    180,
+                    constraints.maxHeight - 180,
+                  );
+                });
+              },
+            ),
+            SizedBox(
+              height: _treePaneHeight,
+              child: WidgetTreePanel(
+                editorState: _editorState,
+                onChanged: _refresh,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -81,6 +173,7 @@ class _EditorScreenState extends State<EditorScreen> {
           _toolbarButton('Load JSON', _showLoadJsonDialog),
           _toolbarButton('Duplicate', _duplicateSelected),
           _toolbarButton('Delete', _deleteSelected),
+          _toolbarButton('Back', _undo),
           const SizedBox(width: 10),
           _alignButton('L', 'left'),
           _alignButton('T', 'top'),
@@ -138,7 +231,7 @@ class _EditorScreenState extends State<EditorScreen> {
 
     final code = _editorState.exportedCodes[_previewFormat.name] ?? '';
     return SizedBox(
-      height: 230,
+      height: _exportPreviewHeight,
       child: Row(
         children: [
           Expanded(child: _previewText('JSON IR', _editorState.exportedJson)),
@@ -196,9 +289,30 @@ class _EditorScreenState extends State<EditorScreen> {
     );
   }
 
-  void _addNode(WidgetNodeType type) {
-    final parentNode = _editorState.primarySelectedNode;
-    _editorState.addNode(type, parentId: parentNode?.id);
+  void _undo() {
+    if (_editorState.undo()) {
+      _refresh();
+    }
+  }
+
+  void _handleKeyEvent(KeyEvent event) {
+    if (event is! KeyDownEvent) {
+      return;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.delete) {
+      _deleteSelected();
+      return;
+    }
+    final isUndo = event.logicalKey == LogicalKeyboardKey.keyZ &&
+        (HardwareKeyboard.instance.isControlPressed ||
+            HardwareKeyboard.instance.isMetaPressed);
+    if (isUndo) {
+      _undo();
+    }
+  }
+
+  void _addNode(String type) {
+    _editorState.addNode(type);
     _refresh();
   }
 

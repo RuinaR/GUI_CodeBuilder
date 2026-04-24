@@ -1,14 +1,27 @@
-.dart-home/
+﻿# Flutter/Dart generated files
 .dart_tool/
+.dart-home/
 .flutter-sdk/
 build/
-.idea/
-*.iml
-exports/
-*.lnk
 .flutter-plugins
 .flutter-plugins-dependencies
+.packages
+
+# Export/generated outputs
+exports/
+*.lnk
+
+# IDE/user-local files
+.vscode/
+.idea/
+*.iml
+
+# Python generated files
 __pycache__/
-*.pyc
+*.py[cod]
 .venv/
 venv/
+
+# OS files
+.DS_Store
+Thumbs.db

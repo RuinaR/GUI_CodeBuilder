@@ -1,7 +1,5 @@
 import 'layout_mode.dart';
-
-// 캔버스에 배치되는 위젯 종류를 정의한다.
-enum WidgetNodeType { text, button, container, row, column }
+import 'widget_definition.dart';
 
 // 위젯 트리의 단일 노드와 화면 배치 정보를 가진다.
 class WidgetNode {
@@ -18,7 +16,7 @@ class WidgetNode {
         children = children ?? <WidgetNode>[];
 
   final String id;
-  WidgetNodeType type;
+  String type;
   double x;
   double y;
   double width;
@@ -28,22 +26,14 @@ class WidgetNode {
 
   String get displayName => props['name']?.toString().isNotEmpty == true
       ? props['name'].toString()
-      : '${type.name}($id)';
+      : '$type($id)';
 
   bool get canHaveChildren {
-    return type == WidgetNodeType.container ||
-        type == WidgetNodeType.row ||
-        type == WidgetNodeType.column;
+    return definitionFor(type).canHaveChildren;
   }
 
   LayoutMode get layoutMode {
-    if (type == WidgetNodeType.row) {
-      return LayoutMode.row;
-    }
-    if (type == WidgetNodeType.column) {
-      return LayoutMode.column;
-    }
-    return LayoutMode.absolute;
+    return definitionFor(type).layoutMode;
   }
 
   bool get responsive {
@@ -67,6 +57,7 @@ class WidgetNode {
       children: <WidgetNode>[],
     );
     newNode.props['name'] = newNode.id;
+    newNode.props['memberName'] = newNode.id;
     newNode.children = children
         .map((child) => child.cloneWithNewIds(createId, offset: offset))
         .toList();
@@ -77,7 +68,7 @@ class WidgetNode {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'type': type.name,
+      'type': type,
       'role': canHaveChildren ? 'layout' : 'control',
       'frame': {
         'x': x,
@@ -99,7 +90,7 @@ class WidgetNode {
   Map<String, dynamic> toLegacyJson() {
     return {
       'id': id,
-      'type': type.name,
+      'type': type,
       'x': x,
       'y': y,
       'width': width,
@@ -122,10 +113,7 @@ class WidgetNode {
     props.addAll(Map<String, dynamic>.from(json['behavior'] as Map? ?? {}));
     return WidgetNode(
       id: json['id']?.toString() ?? 'node_0',
-      type: WidgetNodeType.values.firstWhere(
-        (type) => type.name == json['type'],
-        orElse: () => WidgetNodeType.container,
-      ),
+      type: json['type']?.toString() ?? 'container',
       x: _readDouble(frame['x'] ?? json['x'], 0),
       y: _readDouble(frame['y'] ?? json['y'], 0),
       width: _readDouble(frame['width'] ?? json['width'], 120),
@@ -162,6 +150,14 @@ class WidgetNode {
     return {
       if (props.containsKey('name')) 'name': props['name'],
       if (props.containsKey('text')) 'text': props['text'],
+      if (props.containsKey('title')) 'title': props['title'],
+      if (props.containsKey('items')) 'items': props['items'],
+      if (props.containsKey('columns')) 'columns': props['columns'],
+      if (props.containsKey('rows')) 'rows': props['rows'],
+      if (props.containsKey('src')) 'src': props['src'],
+      if (props.containsKey('placeholder')) 'placeholder': props['placeholder'],
+      if (props.containsKey('groupName')) 'groupName': props['groupName'],
+      if (props.containsKey('radioValue')) 'radioValue': props['radioValue'],
       if (props.containsKey('fontFamily')) 'fontFamily': props['fontFamily'],
       if (props.containsKey('fontSize')) 'fontSize': props['fontSize'],
       if (props.containsKey('fontWeight')) 'fontWeight': props['fontWeight'],
@@ -196,7 +192,8 @@ class WidgetNode {
 
   Map<String, dynamic> _behaviorProps() {
     return {
-      'memberName': _safeMemberName(props['name']?.toString() ?? id),
+      'memberName': _safeMemberName(
+          props['memberName']?.toString() ?? props['name']?.toString() ?? id),
       'onClick': props['onClick']?.toString() ?? '',
     };
   }

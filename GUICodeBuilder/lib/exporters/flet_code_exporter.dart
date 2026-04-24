@@ -13,12 +13,14 @@ class FletCodeExporter implements CodeExporter {
     return {
       format.fileName: exportPage(irJson),
       'test_mains/flet_test_main.py': _exportTestMain(),
+      'test_mains/run_flet_test.cmd': _exportRunFletTestCmd(),
     };
   }
 
   @override
   String exportPage(Map<String, dynamic> irJson) {
     final document = IrDocument.fromJson(irJson);
+    final className = _safeClassName(document.className);
     final width = _formatNumber(document.width);
     final height = _formatNumber(document.height);
     final nodes = document.nodes;
@@ -28,11 +30,15 @@ import flet as ft
 
 
 # GUI Code Builder에서 생성된 Flet 페이지이다.
-class GeneratedFletPage:
+class ${className}FletPage:
     def __init__(self):
 ${_exportMembers(nodes)}
 
+    def initialize(self):
+        pass
+
     def build(self, page: ft.Page):
+        self.initialize()
         page.title = "Generated Page"
         page.window_width = $width
         page.window_height = $height
@@ -47,12 +53,20 @@ ${nodes.map((node) => _exportPositionedNode(node, 16)).join('\n')}
         )
         page.add(self.canvas)
 
+    def release(self, page: ft.Page):
+        if self.canvas in page.controls:
+            page.controls.remove(self.canvas)
+            page.update()
+
     def on_button_click(self, control_id):
         pass
 
+    def on_radio_change(self, group_name, value):
+        self.radio_group_values[group_name] = value
+
 
 def main(page: ft.Page):
-    GeneratedFletPage().build(page)
+    ${className}FletPage().build(page)
 ''';
   }
 
@@ -74,8 +88,20 @@ if __name__ == "__main__":
 ''';
   }
 
+  String _exportRunFletTestCmd() {
+    return r'''
+@echo off
+setlocal
+python "%~dp0flet_test_main.py"
+pause
+''';
+  }
+
   String _exportMembers(List<WidgetNode> nodes) {
-    final lines = <String>['        self.canvas = None'];
+    final lines = <String>[
+      '        self.canvas = None',
+      '        self.radio_group_values = {}'
+    ];
     void collect(WidgetNode node) {
       lines.add('        self.${_memberName(node)} = None');
       for (final child in node.children) {
@@ -115,17 +141,46 @@ $space),''';
 
   String _exportControl(WidgetNode node, int indent) {
     switch (node.type) {
-      case WidgetNodeType.text:
+      case 'text':
         return _exportText(node, indent);
-      case WidgetNodeType.button:
+      case 'button':
         return _exportButton(node, indent);
-      case WidgetNodeType.container:
+      case 'container':
+      case 'groupBox':
+      case 'tabs':
+      case 'scrollArea':
         return _exportContainer(node, indent);
-      case WidgetNodeType.row:
+      case 'row':
         return _exportFlex(node, indent, 'Row');
-      case WidgetNodeType.column:
+      case 'column':
         return _exportFlex(node, indent, 'Column');
+      case 'radioButton':
+        return _exportRadio(node, indent);
+      case 'checkBox':
+      case 'spinBox':
+      case 'doubleSpinBox':
+      case 'comboBox':
+      case 'textBox':
+      case 'lineEdit':
+      case 'listBox':
+      case 'progressBar':
+      case 'horizontalSlider':
+      case 'verticalSlider':
+      case 'table':
+      case 'image':
+        return _exportText(node, indent);
+      default:
+        return _exportText(node, indent);
     }
+  }
+
+  String _exportRadio(WidgetNode node, int indent) {
+    final space = ' ' * indent;
+    return '''ft.Radio(
+$space    label=${_quote(node.props['text']?.toString() ?? 'Radio')},
+$space    value=${_quote(_radioValue(node))},
+$space    data=${_quote(_radioGroupName(node))},
+$space)''';
   }
 
   String _exportText(WidgetNode node, int indent) {
@@ -141,7 +196,7 @@ $space)''';
   String _exportButton(WidgetNode node, int indent) {
     final space = ' ' * indent;
     return '''ft.ElevatedButton(
-$space    text=${_quote(node.props['text']?.toString() ?? 'Button')},
+$space    content=${_quote(node.props['text']?.toString() ?? 'Button')},
 $space    bgcolor=${_quote(node.props['backgroundColor']?.toString() ?? '#2563EB')},
 $space    color=${_quote(node.props['foregroundColor']?.toString() ?? '#FFFFFF')},
 $space    on_click=lambda e: self.on_button_click(${_quote(node.id)}),
@@ -197,6 +252,23 @@ $space    content=self.${_memberName(node)},
 $space)''';
   }
 
+  String _radioGroupName(WidgetNode node) =>
+      node.props['groupName']?.toString().isNotEmpty == true
+          ? node.props['groupName'].toString()
+          : 'default';
+
+  String _radioValue(WidgetNode node) =>
+      node.props['radioValue']?.toString().isNotEmpty == true
+          ? node.props['radioValue'].toString()
+          : node.id;
+  String _safeClassName(String name) {
+    final compact = name.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '');
+    if (compact.isEmpty) {
+      return 'GeneratedPage';
+    }
+    return '${compact.substring(0, 1).toUpperCase()}${compact.substring(1)}';
+  }
+
   String _formatNumber(dynamic value) {
     final number = value is num
         ? value.toDouble()
@@ -212,7 +284,9 @@ $space)''';
   }
 
   String _memberName(WidgetNode node) {
-    final raw = node.props['name']?.toString() ?? node.id;
+    final raw = node.props['memberName']?.toString() ??
+        node.props['name']?.toString() ??
+        node.id;
     final compact = raw.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '_');
     final safe = compact.isEmpty ? node.id : compact;
     return RegExp(r'^[0-9]').hasMatch(safe) ? 'control_$safe' : safe;

@@ -1,0 +1,19 @@
+﻿# Repository root ignore for nested Flutter project
+GUICodeBuilder/.dart_tool/
+GUICodeBuilder/.dart-home/
+GUICodeBuilder/.flutter-sdk/
+GUICodeBuilder/build/
+GUICodeBuilder/exports/
+GUICodeBuilder/.flutter-plugins
+GUICodeBuilder/.flutter-plugins-dependencies
+GUICodeBuilder/.packages
+GUICodeBuilder/.vscode/
+GUICodeBuilder/.idea/
+GUICodeBuilder/*.iml
+GUICodeBuilder/*.lnk
+GUICodeBuilder/__pycache__/
+GUICodeBuilder/*.py[cod]
+GUICodeBuilder/.venv/
+GUICodeBuilder/venv/
+.DS_Store
+Thumbs.db
