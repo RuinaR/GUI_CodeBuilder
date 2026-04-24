@@ -185,7 +185,7 @@ class _PropertyPanelState extends State<PropertyPanel> {
         const Divider(height: 28),
         _textField(
           'name',
-          node.props['name']?.toString() ?? node.id,
+          node.payload.string('name', fallback: node.id),
           (value) {
             editorState.updateNodeProp(node, 'name', value);
           },
@@ -193,7 +193,7 @@ class _PropertyPanelState extends State<PropertyPanel> {
         ),
         _textField(
           'member variable',
-          node.props['memberName']?.toString() ?? node.id,
+          node.payload.string('memberName', fallback: node.id),
           (value) => editorState.updateNodeProp(node, 'memberName', value),
           fieldKey: '${node.id}.memberName',
         ),
@@ -204,7 +204,7 @@ class _PropertyPanelState extends State<PropertyPanel> {
   }
 
   Widget _propertyField(WidgetNode node, WidgetPropertyDefinition property) {
-    final rawValue = node.props[property.key] ?? property.fallback ?? '';
+    final rawValue = node.payload[property.key] ?? property.fallback ?? '';
     switch (property.kind) {
       case WidgetPropertyKind.number:
         return _numberField(

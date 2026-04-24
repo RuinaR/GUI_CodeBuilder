@@ -16,7 +16,7 @@ class PyQtCodeExporter implements CodeExporter {
       format.fileName: exportPage(irJson),
       'test_mains/pyqt_test_main.py': _exportTestMain(irJson),
       'test_mains/run_pyqt_test.cmd': _exportRunPyQtTestCmd(),
-      'requirements_export.txt': 'flet\nPyQt6\n',
+      'requirements_export.txt': 'flet==0.82.2\nPyQt6==6.11.0\n',
       'tools/install_export_python_deps.cmd':
           '@echo off\nsetlocal\nfor %%I in ("%~dp0..\\..") do set "ROOT=%%~fI\\"\npython -m pip install -r "%~dp0..\\requirements_export.txt"\nif not exist "%ROOT%.flutter-sdk\\flutter\\bin\\flutter.bat" (\n  where git >nul 2>nul\n  if errorlevel 1 (\n    echo Git is required to install Flutter SDK.\n    pause\n    exit /b 1\n  )\n  mkdir "%ROOT%.flutter-sdk" 2>nul\n  git clone -b stable https://github.com/flutter/flutter.git "%ROOT%.flutter-sdk\\flutter"\n)\n"%ROOT%.flutter-sdk\\flutter\\bin\\flutter.bat" --version\npause\n',
     };
@@ -136,7 +136,8 @@ pause
 
   String _createTableControl(WidgetNode node, String parent) {
     final name = _memberName(node);
-    final columns = _csv(node.props['columns']?.toString() ?? 'Name,Value');
+    final columns =
+        _csv(node.payload.string('columns', fallback: 'Name,Value'));
     final rows = _tableRows(node);
     final headers = columns.map(_quote).join(', ');
     final rowLines = <String>[
@@ -157,16 +158,16 @@ pause
 
   String _createImageControl(WidgetNode node, String parent) {
     final name = _memberName(node);
-    final src = node.props['src']?.toString() ?? '';
+    final src = node.payload.string('src');
     if (src.isEmpty) {
-      return 'self.$name = QtWidgets.QLabel(${_quote(node.props['text']?.toString() ?? 'Image')}, $parent)';
+      return 'self.$name = QtWidgets.QLabel(${_quote(node.payload.string('text', fallback: 'Image'))}, $parent)';
     }
     return 'self.$name = QtWidgets.QLabel($parent)\n        self.${name}_pixmap = QtGui.QPixmap(${_quote(src)})\n        self.$name.setPixmap(self.${name}_pixmap.scaled(${_formatNumber(node.width)}, ${_formatNumber(node.height)}, QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation))';
   }
 
   String _createTabsControl(WidgetNode node, String parent) {
     final name = _memberName(node);
-    final tabs = _csv(node.props['tabs']?.toString() ?? 'Tab 1,Tab 2');
+    final tabs = _csv(node.payload.string('tabs', fallback: 'Tab 1,Tab 2'));
     final lines = <String>[
       'self.$name = QtWidgets.QTabWidget($parent)',
     ];
@@ -189,32 +190,30 @@ pause
   String _createRadioControl(WidgetNode node, String parent) {
     final name = _memberName(node);
     final groupName = _radioGroupName(node);
-    final selectedLine = node.props['selected'] == true
+    final selectedLine = node.payload.boolean('selected')
         ? '\n        self.$name.setChecked(True)'
         : '';
-    return 'self.$name = QtWidgets.QRadioButton(${_quote(node.props['text']?.toString() ?? 'Radio')}, $parent)\n        if ${_quote(groupName)} not in self.radio_groups:\n            self.radio_groups[${_quote(groupName)}] = QtWidgets.QButtonGroup(self)\n            self.radio_groups[${_quote(groupName)}].setExclusive(True)\n        self.radio_groups[${_quote(groupName)}].addButton(self.$name)$selectedLine\n        self.$name.toggled.connect(self.${_eventHandlerName(node, 'on_toggled')})';
+    return 'self.$name = QtWidgets.QRadioButton(${_quote(node.payload.string('text', fallback: 'Radio'))}, $parent)\n        if ${_quote(groupName)} not in self.radio_groups:\n            self.radio_groups[${_quote(groupName)}] = QtWidgets.QButtonGroup(self)\n            self.radio_groups[${_quote(groupName)}].setExclusive(True)\n        self.radio_groups[${_quote(groupName)}].addButton(self.$name)$selectedLine\n        self.$name.toggled.connect(self.${_eventHandlerName(node, 'on_toggled')})';
   }
 
   String _applyStyle(WidgetNode node) {
     final name = _memberName(node);
-    if (node.type == 'text') {
-      final color = node.props['color']?.toString() ?? '#111827';
-      final fontSize = _formatNumber(node.props['fontSize'] ?? 16);
+    if (node.widgetType == WidgetType.label) {
+      final color = node.payload.string('color', fallback: '#111827');
+      final fontSize =
+          _formatNumber(node.payload.number('fontSize', fallback: 16));
       return 'self.$name.setStyleSheet(${_quote('color: $color; font-size: ${fontSize}px;')})';
     }
-    final background = node.props['backgroundColor']?.toString() ?? '#FFFFFF';
-    final foreground = node.props['foregroundColor']?.toString();
-    final border = node.props['borderColor']?.toString() ?? '#CBD5E1';
-    final radius = _formatNumber(node.props['borderRadius'] ?? 0);
-    final textColor = foreground == null ? '' : ' color: $foreground;';
+    final background =
+        node.payload.string('backgroundColor', fallback: '#FFFFFF');
+    final foreground = node.payload.string('foregroundColor');
+    final border = node.payload.string('borderColor', fallback: '#CBD5E1');
+    final radius = _formatNumber(node.payload.number('borderRadius'));
+    final textColor = foreground.isEmpty ? '' : ' color: $foreground;';
     return 'self.$name.setStyleSheet(${_quote('background-color: $background; border: 1px solid $border; border-radius: ${radius}px;$textColor')})';
   }
 
-  List<String> _items(WidgetNode node) =>
-      (node.props['items']?.toString() ?? '')
-          .split(',')
-          .where((item) => item.trim().isNotEmpty)
-          .toList();
+  List<String> _items(WidgetNode node) => node.payload.csv('items');
 
   String _exportEventHandlers(List<WidgetNode> nodes) {
     final lines = <String>[];
@@ -242,6 +241,21 @@ pause
       'lineEdit': (node) =>
           '''    def ${_eventHandlerName(node, 'on_text_changed')}(self, text):
         # 여기에 ${_memberName(node)}의 텍스트 변경 이벤트를 구현합니다.
+        pass
+''',
+      'textBox': (node) =>
+          '''    def ${_eventHandlerName(node, 'on_text_changed')}(self):
+        # 여기에 ${_memberName(node)}의 텍스트 변경 이벤트를 구현합니다.
+        pass
+''',
+      'spinBox': (node) =>
+          '''    def ${_eventHandlerName(node, 'on_value_changed')}(self, value):
+        # 여기에 ${_memberName(node)}의 값 변경 이벤트를 구현합니다.
+        pass
+''',
+      'doubleSpinBox': (node) =>
+          '''    def ${_eventHandlerName(node, 'on_value_changed')}(self, value):
+        # 여기에 ${_memberName(node)}의 값 변경 이벤트를 구현합니다.
         pass
 ''',
       'horizontalSlider': (node) =>
@@ -277,12 +291,12 @@ pause
       .where((item) => item.isNotEmpty)
       .toList();
 
-  List<List<String>> _tableRows(WidgetNode node) =>
-      (node.props['rows']?.toString() ?? '')
-          .split(';')
-          .where((row) => row.trim().isNotEmpty)
-          .map(_csv)
-          .toList();
+  List<List<String>> _tableRows(WidgetNode node) => node.payload
+      .string('rows')
+      .split(';')
+      .where((row) => row.trim().isNotEmpty)
+      .map(_csv)
+      .toList();
 
   String _safeClassName(String name) {
     final compact = name.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '');
@@ -307,13 +321,14 @@ pause
   }
 
   String _radioGroupName(WidgetNode node) =>
-      node.props['groupName']?.toString().isNotEmpty == true
-          ? node.props['groupName'].toString()
+      node.payload.string('groupName').isNotEmpty
+          ? node.payload.string('groupName')
           : 'default';
   String _memberName(WidgetNode node) {
-    final raw = node.props['memberName']?.toString() ??
-        node.props['name']?.toString() ??
-        node.id;
+    final raw = node.payload.string(
+      'memberName',
+      fallback: node.payload.string('name', fallback: node.id),
+    );
     final compact = raw.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '_');
     final safe = compact.isEmpty ? node.id : compact;
     return RegExp(r'^[0-9]').hasMatch(safe) ? 'control_$safe' : safe;

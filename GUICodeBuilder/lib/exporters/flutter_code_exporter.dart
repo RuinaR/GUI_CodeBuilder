@@ -70,7 +70,7 @@ ${_exportMembers(nodes)}
                   height: $height,
                   child: Stack(
                     children: [
-${nodes.where((node) => node.type != 'radioButton').map((node) => _exportPositionedNode(node, 22)).join('\n')}
+${nodes.where((node) => !node.isRadioButton).map((node) => _exportPositionedNode(node, 22)).join('\n')}
 ${_exportRadioGroups(nodes, 22)}
                     ],
                   ),
@@ -151,6 +151,7 @@ $space),''';
   String _exportMembers(List<WidgetNode> nodes) {
     final lines = <String>[
       '  final Map<String, String?> radioGroupValues = <String, String?>{};',
+      '  final Map<String, String?> dropdownValues = <String, String?>{};',
       '  final Map<String, bool> checkBoxValues = <String, bool>{};',
       '  final Map<String, double> sliderValues = <String, double>{};',
     ];
@@ -173,14 +174,17 @@ $space),''';
     for (final child in node.children) {
       lines.add(_exportMemberAssignment(child, indent));
     }
-    if (node.type == 'radioButton') {
+    if (node.isRadioButton) {
       lines.add(_exportRadioDefault(node, indent));
     }
-    if (node.type == 'checkBox') {
+    if (node.isCheckBox) {
       lines.add(_exportCheckBoxDefault(node, indent));
     }
-    if (node.type == 'horizontalSlider' || node.type == 'verticalSlider') {
+    if (node.isSlider) {
       lines.add(_exportSliderDefault(node, indent));
+    }
+    if (node.widgetType == WidgetType.comboBox) {
+      lines.add(_exportDropdownDefault(node, indent));
     }
     lines.add('$space${_memberName(node)} = ${_exportWidget(node, indent)};');
     return lines.join('\n');
@@ -196,7 +200,7 @@ $space),''';
     final space = ' ' * indent;
     final groupName = _quote(_radioGroupName(node));
     final value = _quote(_radioValue(node));
-    final selected = node.props['selected'] == true;
+    final selected = node.payload.boolean('selected');
     return selected
         ? '${space}radioGroupValues.putIfAbsent($groupName, () => $value);'
         : '${space}radioGroupValues.putIfAbsent($groupName, () => null);';
@@ -205,21 +209,34 @@ $space),''';
   String _exportCheckBoxDefault(WidgetNode node, int indent) {
     final space = ' ' * indent;
     final member = _quote(_memberName(node));
-    final checked = node.props['checked'] == true;
+    final checked = node.payload.boolean('checked');
     return '${space}checkBoxValues.putIfAbsent($member, () => $checked);';
   }
 
   String _exportSliderDefault(WidgetNode node, int indent) {
     final space = ' ' * indent;
     final member = _quote(_memberName(node));
-    final value = _formatNumber(node.props['value'] ?? 0);
+    final value = _formatNumber(node.payload.number('value'));
     return '${space}sliderValues.putIfAbsent($member, () => $value);';
+  }
+
+  String _exportDropdownDefault(WidgetNode node, int indent) {
+    final space = ' ' * indent;
+    final member = _quote(_memberName(node));
+    final items = _items(node);
+    final payloadValue = node.payload.string('value');
+    final selected = items.contains(payloadValue)
+        ? payloadValue
+        : (items.isEmpty ? '' : items.first);
+    return selected.isEmpty
+        ? '${space}dropdownValues.putIfAbsent($member, () => null);'
+        : '${space}dropdownValues.putIfAbsent($member, () => ${_quote(selected)});';
   }
 
   String _exportRadio(WidgetNode node, int indent) {
     final space = ' ' * indent;
     final value = _quote(_radioValue(node));
-    final text = _quote(node.props['text']?.toString() ?? 'Radio');
+    final text = _quote(node.payload.string('text', fallback: 'Radio'));
     return '''Row(
 $space  children: [
 $space    SizedBox(
@@ -234,7 +251,7 @@ $space)''';
 
   String _exportRadioGroups(List<WidgetNode> nodes, int indent) {
     final grouped = <String, List<WidgetNode>>{};
-    for (final node in nodes.where((node) => node.type == 'radioButton')) {
+    for (final node in nodes.where((node) => node.isRadioButton)) {
       grouped.putIfAbsent(_radioGroupName(node), () => []).add(node);
     }
     final space = ' ' * indent;
@@ -303,66 +320,79 @@ $space),''';
   String _exportCheckBox(WidgetNode node, int indent) {
     final space = ' ' * indent;
     final member = _quote(_memberName(node));
-    final text = _quote(node.props['text']?.toString() ?? 'Check');
+    final text = _quote(node.payload.string('text', fallback: 'Check'));
     return '''StatefulBuilder(
 $space  builder: (context, setControlState) => CheckboxListTile(
 $space    dense: true,
 $space    contentPadding: EdgeInsets.zero,
 $space    title: Text($text, overflow: TextOverflow.ellipsis),
 $space    value: checkBoxValues[$member] ?? false,
-$space    onChanged: (value) => setControlState(() => checkBoxValues[$member] = value ?? false),
+$space    onChanged: (value) {
+$space      final checked = value ?? false;
+$space      setControlState(() => checkBoxValues[$member] = checked);
+$space      ${_eventHandlerName(node, 'OnChanged')}(checked);
+$space    },
 $space  ),
 $space)''';
   }
 
   String _exportNumberInput(WidgetNode node, int indent) {
     final space = ' ' * indent;
-    final value = _quote((node.props['value'] ?? 0).toString());
+    final value = _quote(node.payload.string('value', fallback: '0'));
+    final handler = _eventHandlerName(node, 'OnChanged');
     return '''TextField(
 $space  controller: TextEditingController(text: $value),
 $space  keyboardType: TextInputType.number,
 $space  decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
+$space  onChanged: $handler,
 $space)''';
   }
 
   String _exportComboBox(WidgetNode node, int indent) {
     final space = ' ' * indent;
+    final member = _quote(_memberName(node));
     final items = _items(node);
-    final selected = _quote(node.props['value']?.toString().isNotEmpty == true
-        ? node.props['value'].toString()
-        : (items.isEmpty ? '' : items.first));
     final entries = items
         .map((item) =>
             '${' ' * (indent + 4)}DropdownMenuItem<String>(value: ${_quote(item)}, child: Text(${_quote(item)})),')
         .join('\n');
-    return '''DropdownButtonFormField<String>(
-$space  value: $selected,
-$space  decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
-$space  items: [
+    return '''StatefulBuilder(
+$space  builder: (context, setControlState) => DropdownButtonFormField<String>(
+$space    value: dropdownValues[$member],
+$space    decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
+$space    items: [
 $entries
-$space  ],
-$space  onChanged: (_) {},
+$space    ],
+$space    onChanged: (value) {
+$space      setControlState(() => dropdownValues[$member] = value);
+$space      ${_eventHandlerName(node, 'OnChanged')}(value);
+$space    },
+$space  ),
 $space)''';
   }
 
   String _exportTextBox(WidgetNode node, int indent) {
     final space = ' ' * indent;
-    final text = _quote(node.props['text']?.toString() ?? '');
+    final text = _quote(node.payload.string('text'));
+    final handler = _eventHandlerName(node, 'OnChanged');
     return '''TextField(
 $space  controller: TextEditingController(text: $text),
 $space  maxLines: null,
 $space  expands: true,
 $space  decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
+$space  onChanged: $handler,
 $space)''';
   }
 
   String _exportLineEdit(WidgetNode node, int indent) {
     final space = ' ' * indent;
-    final text = _quote(node.props['text']?.toString() ?? '');
-    final placeholder = _quote(node.props['placeholder']?.toString() ?? '');
+    final text = _quote(node.payload.string('text'));
+    final placeholder = _quote(node.payload.string('placeholder'));
+    final handler = _eventHandlerName(node, 'OnChanged');
     return '''TextField(
 $space  controller: TextEditingController(text: $text),
 $space  decoration: InputDecoration(border: const OutlineInputBorder(), isDense: true, hintText: $placeholder),
+$space  onChanged: $handler,
 $space)''';
   }
 
@@ -394,14 +424,17 @@ $space)''';
   String _exportSlider(WidgetNode node, int indent, bool vertical) {
     final space = ' ' * indent;
     final member = _quote(_memberName(node));
-    final min = _formatNumber(node.props['min'] ?? 0);
-    final max = _formatNumber(node.props['max'] ?? 100);
+    final min = _formatNumber(node.payload.number('min'));
+    final max = _formatNumber(node.payload.number('max', fallback: 100));
     final slider = '''StatefulBuilder(
 $space  builder: (context, setControlState) => Slider(
 $space    value: sliderValues[$member]!.clamp($min, $max).toDouble(),
 $space    min: $min,
 $space    max: $max,
-$space    onChanged: (value) => setControlState(() => sliderValues[$member] = value),
+$space    onChanged: (value) {
+$space      setControlState(() => sliderValues[$member] = value);
+$space      ${_eventHandlerName(node, 'OnChanged')}(value);
+$space    },
 $space  ),
 $space)''';
     if (!vertical) {
@@ -415,7 +448,8 @@ $space)''';
 
   String _exportTable(WidgetNode node, int indent) {
     final space = ' ' * indent;
-    final columns = _csv(node.props['columns']?.toString() ?? 'Name,Value');
+    final columns =
+        _csv(node.payload.string('columns', fallback: 'Name,Value'));
     final rows = _tableRows(node);
     final header = columns
         .map((item) =>
@@ -442,17 +476,17 @@ $space)''';
   }
 
   String _exportImage(WidgetNode node, int indent) {
-    final src = node.props['src']?.toString() ?? '';
+    final src = node.payload.string('src');
     if (src.isEmpty) {
       return _exportSimple(
-          node, indent, node.props['text']?.toString() ?? 'Image');
+          node, indent, node.payload.string('text', fallback: 'Image'));
     }
     return 'Image.network(${_quote(src)}, fit: BoxFit.cover)';
   }
 
   String _exportSimple(WidgetNode node, int indent, String label) {
     final space = ' ' * indent;
-    final text = _quote(node.props['text']?.toString() ?? label);
+    final text = _quote(node.payload.string('text', fallback: label));
     return '''Container(
 $space  alignment: Alignment.centerLeft,
 $space  padding: const EdgeInsets.all(8),
@@ -463,11 +497,14 @@ $space)''';
 
   String _exportText(WidgetNode node, int indent) {
     final space = ' ' * indent;
-    final text = _quote(node.props['text']?.toString() ?? '');
-    final fontSize = _formatNumber(node.props['fontSize'] ?? 16);
-    final fontFamily = _quote(node.props['fontFamily']?.toString() ?? 'Arial');
-    final color = _exportColor(node.props['color']?.toString() ?? '#111827');
-    final weight = node.props['fontWeight'] == 'bold'
+    final text = _quote(node.payload.string('text'));
+    final fontSize =
+        _formatNumber(node.payload.number('fontSize', fallback: 16));
+    final fontFamily =
+        _quote(node.payload.string('fontFamily', fallback: 'Arial'));
+    final color =
+        _exportColor(node.payload.string('color', fallback: '#111827'));
+    final weight = node.payload.string('fontWeight') == 'bold'
         ? 'FontWeight.bold'
         : 'FontWeight.normal';
     return '''Text(
@@ -484,14 +521,15 @@ $space)''';
 
   String _exportButton(WidgetNode node, int indent) {
     final space = ' ' * indent;
-    final text = _quote(node.props['text']?.toString() ?? 'Button');
+    final text = _quote(node.payload.string('text', fallback: 'Button'));
     final background = _exportColor(
-      node.props['backgroundColor']?.toString() ?? '#2563EB',
+      node.payload.string('backgroundColor', fallback: '#2563EB'),
     );
     final foreground = _exportColor(
-      node.props['foregroundColor']?.toString() ?? '#FFFFFF',
+      node.payload.string('foregroundColor', fallback: '#FFFFFF'),
     );
-    final radius = _formatNumber(node.props['borderRadius'] ?? 6);
+    final radius =
+        _formatNumber(node.payload.number('borderRadius', fallback: 6));
     return '''ElevatedButton(
 $space  style: ElevatedButton.styleFrom(
 $space    backgroundColor: $background,
@@ -507,7 +545,7 @@ $space)''';
 
   String _exportGroupBox(WidgetNode node, int indent) {
     final space = ' ' * indent;
-    final title = _quote(node.props['title']?.toString() ?? 'Group');
+    final title = _quote(node.payload.string('title', fallback: 'Group'));
     final childCode = _stackChildren(node, indent + 6);
     return '''InputDecorator(
 $space  decoration: InputDecoration(
@@ -521,7 +559,7 @@ $space)''';
 
   String _exportTabs(WidgetNode node, int indent) {
     final space = ' ' * indent;
-    final tabs = _csv(node.props['tabs']?.toString() ?? 'Tab 1,Tab 2');
+    final tabs = _csv(node.payload.string('tabs', fallback: 'Tab 1,Tab 2'));
     final labels = tabs
         .map((tab) => '${' ' * (indent + 6)}Tab(text: ${_quote(tab)}),')
         .join('\n');
@@ -566,7 +604,7 @@ $space)''';
     final space = ' ' * indent;
     final children = [
       node.children
-          .where((child) => child.type != 'radioButton')
+          .where((child) => !child.isRadioButton)
           .map((child) => _exportPositionedNode(child, indent + 4))
           .join('\n'),
       _exportRadioGroups(node.children, indent + 4),
@@ -581,13 +619,14 @@ $space)''';
   String _exportContainer(WidgetNode node, int indent) {
     final space = ' ' * indent;
     final background = _exportColor(
-      node.props['backgroundColor']?.toString() ?? '#F8FAFC',
+      node.payload.string('backgroundColor', fallback: '#F8FAFC'),
     );
     final borderColor = _exportColor(
-      node.props['borderColor']?.toString() ?? '#94A3B8',
+      node.payload.string('borderColor', fallback: '#94A3B8'),
     );
-    final borderRadius = _formatNumber(node.props['borderRadius'] ?? 6);
-    final padding = _formatNumber(node.props['padding'] ?? 0);
+    final borderRadius =
+        _formatNumber(node.payload.number('borderRadius', fallback: 6));
+    final padding = _formatNumber(node.payload.number('padding'));
     final childCode = node.children.isEmpty
         ? 'null'
         : '''Padding(
@@ -607,16 +646,16 @@ $space)''';
   String _exportFlex(WidgetNode node, int indent, String widgetName) {
     final space = ' ' * indent;
     final background = _exportColor(
-      node.props['backgroundColor']?.toString() ?? '#FFFFFF',
+      node.payload.string('backgroundColor', fallback: '#FFFFFF'),
     );
     final borderColor = _exportColor(
-      node.props['borderColor']?.toString() ?? '#CBD5E1',
+      node.payload.string('borderColor', fallback: '#CBD5E1'),
     );
-    final gap = _formatNumber(node.props['gap'] ?? 8);
-    final padding = _formatNumber(node.props['padding'] ?? 8);
+    final gap = _formatNumber(node.payload.number('gap', fallback: 8));
+    final padding = _formatNumber(node.payload.number('padding', fallback: 8));
     final children = <String>[];
     final visibleChildren =
-        node.children.where((child) => child.type != 'radioButton').toList();
+        node.children.where((child) => !child.isRadioButton).toList();
     for (var i = 0; i < visibleChildren.length; i += 1) {
       final child = visibleChildren[i];
       children.add(
@@ -640,8 +679,8 @@ $space    color: $background,
 $space    border: Border.all(color: $borderColor),
 $space  ),
 $space  child: $widgetName(
-$space    mainAxisAlignment: ${_mainAxis(node.props['mainAxisAlignment'])},
-$space    crossAxisAlignment: ${_crossAxis(node.props['crossAxisAlignment'])},
+$space    mainAxisAlignment: ${_mainAxis(node.payload.string('mainAxisAlignment'))},
+$space    crossAxisAlignment: ${_crossAxis(node.payload.string('crossAxisAlignment'))},
 $space    children: [
 ${children.join('\n')}
 $space    ],
@@ -651,7 +690,7 @@ $space)''';
 
   String _exportInlineRadioGroups(List<WidgetNode> nodes, int indent) {
     final grouped = <String, List<WidgetNode>>{};
-    for (final node in nodes.where((node) => node.type == 'radioButton')) {
+    for (final node in nodes.where((node) => node.isRadioButton)) {
       grouped.putIfAbsent(_radioGroupName(node), () => []).add(node);
     }
     final space = ' ' * indent;
@@ -682,10 +721,41 @@ $space),''';
   String _exportEventHandlers(List<WidgetNode> nodes) {
     final lines = <String>[];
     void collect(WidgetNode node) {
-      if (node.type == 'button') {
+      if (node.isButton) {
         lines.add('''
   void ${_eventHandlerName(node, 'OnPressed')}() {
     // 여기에 ${_memberName(node)}의 클릭 이벤트를 구현합니다.
+  }
+''');
+      }
+      if (node.isCheckBox) {
+        lines.add('''
+  void ${_eventHandlerName(node, 'OnChanged')}(bool value) {
+    checkBoxValues[${_quote(_memberName(node))}] = value;
+  }
+''');
+      }
+      if (node.widgetType == WidgetType.comboBox) {
+        lines.add('''
+  void ${_eventHandlerName(node, 'OnChanged')}(String? value) {
+    dropdownValues[${_quote(_memberName(node))}] = value;
+  }
+''');
+      }
+      if (node.widgetType == WidgetType.spinBox ||
+          node.widgetType == WidgetType.doubleSpinBox ||
+          node.widgetType == WidgetType.textBox ||
+          node.widgetType == WidgetType.lineEdit) {
+        lines.add('''
+  void ${_eventHandlerName(node, 'OnChanged')}(String value) {
+    // ?ш린??${_memberName(node)}??蹂寃??대깽?몃? 援ы쁽?⑸땲??
+  }
+''');
+      }
+      if (node.isSlider) {
+        lines.add('''
+  void ${_eventHandlerName(node, 'OnChanged')}(double value) {
+    sliderValues[${_quote(_memberName(node))}] = value;
   }
 ''');
       }
@@ -712,7 +782,7 @@ $space),''';
   List<WidgetNode> _flattenRadioNodes(List<WidgetNode> nodes) {
     final result = <WidgetNode>[];
     void collect(WidgetNode node) {
-      if (node.type == 'radioButton') {
+      if (node.isRadioButton) {
         result.add(node);
       }
       for (final child in node.children) {
@@ -759,9 +829,10 @@ $space),''';
   }
 
   String _memberName(WidgetNode node) {
-    final raw = node.props['memberName']?.toString() ??
-        node.props['name']?.toString() ??
-        node.id;
+    final raw = node.payload.string(
+      'memberName',
+      fallback: node.payload.string('name', fallback: node.id),
+    );
     final compact = raw.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '_');
     final safe = compact.isEmpty ? node.id : compact;
     final prefixed = RegExp(r'^[0-9]').hasMatch(safe) ? 'control_$safe' : safe;
@@ -769,20 +840,19 @@ $space),''';
   }
 
   String _radioGroupName(WidgetNode node) =>
-      node.props['groupName']?.toString().isNotEmpty == true
-          ? node.props['groupName'].toString()
+      node.payload.string('groupName').isNotEmpty
+          ? node.payload.string('groupName')
           : 'default';
 
   String _radioValue(WidgetNode node) =>
-      node.props['radioValue']?.toString().isNotEmpty == true
-          ? node.props['radioValue'].toString()
+      node.payload.string('radioValue').isNotEmpty
+          ? node.payload.string('radioValue')
           : node.id;
 
   String _eventHandlerName(WidgetNode node, String suffix) =>
       '${_memberName(node)}$suffix';
 
-  List<String> _items(WidgetNode node) =>
-      _csv(node.props['items']?.toString() ?? '');
+  List<String> _items(WidgetNode node) => node.payload.csv('items');
 
   List<String> _csv(String text) => text
       .split(',')
@@ -790,16 +860,16 @@ $space),''';
       .where((item) => item.isNotEmpty)
       .toList();
 
-  List<List<String>> _tableRows(WidgetNode node) =>
-      (node.props['rows']?.toString() ?? '')
-          .split(';')
-          .where((row) => row.trim().isNotEmpty)
-          .map(_csv)
-          .toList();
+  List<List<String>> _tableRows(WidgetNode node) => node.payload
+      .string('rows')
+      .split(';')
+      .where((row) => row.trim().isNotEmpty)
+      .map(_csv)
+      .toList();
 
   String _progressValue(WidgetNode node) {
-    final value = double.tryParse((node.props['value'] ?? 0).toString()) ?? 0;
-    final max = double.tryParse((node.props['max'] ?? 100).toString()) ?? 100;
+    final value = node.payload.number('value');
+    final max = node.payload.number('max', fallback: 100);
     if (max <= 0) {
       return '0';
     }

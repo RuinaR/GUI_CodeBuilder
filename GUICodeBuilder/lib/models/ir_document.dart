@@ -1,14 +1,12 @@
 import 'widget_node.dart';
 
-// 저장된 JSON IR을 exporter가 사용하기 쉬운 형태로 해석한다.
-class IrDocument {
-  IrDocument({
+class IrPage {
+  const IrPage({
     required this.className,
     required this.title,
     required this.width,
     required this.height,
     required this.responsive,
-    required this.nodes,
   });
 
   final String className;
@@ -16,38 +14,42 @@ class IrDocument {
   final double width;
   final double height;
   final bool responsive;
-  final List<WidgetNode> nodes;
 
-  factory IrDocument.fromJson(Map<String, dynamic> json) {
+  factory IrPage.fromJson(Map<String, dynamic> json) {
     final page = Map<String, dynamic>.from(json['page'] as Map? ?? {});
-    return IrDocument(
+    return IrPage(
       className: page['className']?.toString() ?? 'GeneratedPage',
       title: page['title']?.toString() ?? 'Generated Page',
-      width: _readDouble(page['width'], 960),
-      height: _readDouble(page['height'], 640),
-      responsive: _readBool(page['responsive'], true),
+      width: readDouble(page['width'], 960),
+      height: readDouble(page['height'], 640),
+      responsive: readBool(page['responsive'], true),
+    );
+  }
+}
+
+class IrDocument {
+  IrDocument({
+    required this.page,
+    required this.nodes,
+  });
+
+  final IrPage page;
+  final List<WidgetNode> nodes;
+
+  String get className => page.className;
+  String get title => page.title;
+  double get width => page.width;
+  double get height => page.height;
+  bool get responsive => page.responsive;
+
+  factory IrDocument.fromJson(Map<String, dynamic> json) {
+    return IrDocument(
+      page: IrPage.fromJson(json),
       nodes: (json['nodes'] as List? ?? <dynamic>[]).whereType<Map>().map((
         nodeJson,
       ) {
         return WidgetNode.fromJson(Map<String, dynamic>.from(nodeJson));
       }).toList(),
     );
-  }
-
-  static double _readDouble(dynamic value, double fallback) {
-    if (value is num) {
-      return value.toDouble();
-    }
-    return double.tryParse(value?.toString() ?? '') ?? fallback;
-  }
-
-  static bool _readBool(dynamic value, bool fallback) {
-    if (value is bool) {
-      return value;
-    }
-    if (value is String) {
-      return value.toLowerCase() == 'true';
-    }
-    return fallback;
   }
 }

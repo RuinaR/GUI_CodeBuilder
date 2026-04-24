@@ -1,32 +1,337 @@
 import 'layout_mode.dart';
 import 'widget_definition.dart';
 
-// 위젯 트리의 단일 노드와 화면 배치 정보를 가진다.
-class WidgetNode {
-  WidgetNode({
-    required this.id,
-    required this.type,
+enum WidgetType {
+  button('button'),
+  radioButton('radioButton'),
+  checkBox('checkBox'),
+  spinBox('spinBox'),
+  doubleSpinBox('doubleSpinBox'),
+  label('label'),
+  comboBox('comboBox'),
+  textBox('textBox'),
+  lineEdit('lineEdit'),
+  listBox('listBox'),
+  progressBar('progressBar'),
+  horizontalSlider('horizontalSlider'),
+  verticalSlider('verticalSlider'),
+  table('table'),
+  image('image'),
+  groupBox('groupBox'),
+  tabs('tabs'),
+  scrollArea('scrollArea'),
+  container('container'),
+  row('row'),
+  column('column');
+
+  const WidgetType(this.id);
+
+  final String id;
+
+  static WidgetType fromId(String? id) {
+    for (final type in values) {
+      if (type.id == id) {
+        return type;
+      }
+    }
+    return container;
+  }
+}
+
+class NodeFrame {
+  const NodeFrame({
     required this.x,
     required this.y,
     required this.width,
     required this.height,
+    this.responsive = true,
+  });
+
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+  final bool responsive;
+
+  NodeFrame copyWith({
+    double? x,
+    double? y,
+    double? width,
+    double? height,
+    bool? responsive,
+  }) {
+    return NodeFrame(
+      x: x ?? this.x,
+      y: y ?? this.y,
+      width: width ?? this.width,
+      height: height ?? this.height,
+      responsive: responsive ?? this.responsive,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'x': x,
+      'y': y,
+      'width': width,
+      'height': height,
+      'responsive': responsive,
+    };
+  }
+
+  static NodeFrame fromJson(
+    Map<String, dynamic> json,
+    Map<String, dynamic> payload,
+  ) {
+    final frame = Map<String, dynamic>.from(
+      json['frame'] as Map? ?? <String, dynamic>{},
+    );
+    return NodeFrame(
+      x: readDouble(frame['x'] ?? json['x'], 0),
+      y: readDouble(frame['y'] ?? json['y'], 0),
+      width: readDouble(frame['width'] ?? json['width'], 120),
+      height: readDouble(frame['height'] ?? json['height'], 44),
+      responsive: readBool(
+        frame['responsive'] ?? json['responsive'] ?? payload['responsive'],
+        true,
+      ),
+    );
+  }
+}
+
+class NodeStyle {
+  const NodeStyle({
+    this.color,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.borderColor,
+    this.borderRadius,
+    this.padding,
+  });
+
+  final String? color;
+  final String? backgroundColor;
+  final String? foregroundColor;
+  final String? borderColor;
+  final double? borderRadius;
+  final double? padding;
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (color != null) 'color': color,
+      if (backgroundColor != null) 'backgroundColor': backgroundColor,
+      if (foregroundColor != null) 'foregroundColor': foregroundColor,
+      if (borderColor != null) 'borderColor': borderColor,
+      if (borderRadius != null) 'borderRadius': borderRadius,
+      if (padding != null) 'padding': padding,
+    };
+  }
+}
+
+class NodeBehavior {
+  const NodeBehavior({required this.memberName, this.onClick = ''});
+
+  final String memberName;
+  final String onClick;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'memberName': memberName,
+      'onClick': onClick,
+    };
+  }
+}
+
+class WidgetPayload {
+  WidgetPayload(Map<String, dynamic>? values)
+      : values = Map<String, dynamic>.from(values ?? <String, dynamic>{});
+
+  final Map<String, dynamic> values;
+
+  dynamic operator [](String key) => values[key];
+
+  void operator []=(String key, dynamic value) {
+    values[key] = value;
+  }
+
+  bool containsKey(String key) => values.containsKey(key);
+
+  String string(String key, {String fallback = ''}) {
+    final value = values[key];
+    return value == null ? fallback : value.toString();
+  }
+
+  double number(String key, {double fallback = 0}) {
+    return readDouble(values[key], fallback);
+  }
+
+  bool boolean(String key, {bool fallback = false}) {
+    return readBool(values[key], fallback);
+  }
+
+  List<String> csv(String key) {
+    return string(key)
+        .split(',')
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  Map<String, dynamic> toJson() => Map<String, dynamic>.from(values);
+
+  Map<String, dynamic> contentJson() {
+    return _only(const {
+      'name',
+      'text',
+      'title',
+      'items',
+      'columns',
+      'rows',
+      'src',
+      'placeholder',
+      'groupName',
+      'radioValue',
+      'fontFamily',
+      'fontSize',
+      'fontWeight',
+      'textAlign',
+    });
+  }
+
+  NodeStyle toStyle() {
+    return NodeStyle(
+      color: _optionalString('color'),
+      backgroundColor: _optionalString('backgroundColor'),
+      foregroundColor: _optionalString('foregroundColor'),
+      borderColor: _optionalString('borderColor'),
+      borderRadius: containsKey('borderRadius') ? number('borderRadius') : null,
+      padding: containsKey('padding') ? number('padding') : null,
+    );
+  }
+
+  Map<String, dynamic> layoutJson(LayoutMode mode) {
+    return {
+      'mode': mode.name,
+      ..._only(const {
+        'gap',
+        'mainAxisAlignment',
+        'crossAxisAlignment',
+      }),
+    };
+  }
+
+  NodeBehavior behavior(String fallbackMemberName) {
+    return NodeBehavior(
+      memberName: _safeMemberName(
+        string(
+          'memberName',
+          fallback: string('name', fallback: fallbackMemberName),
+        ),
+        fallbackMemberName,
+      ),
+      onClick: string('onClick'),
+    );
+  }
+
+  Map<String, dynamic> _only(Set<String> keys) {
+    return {
+      for (final key in keys)
+        if (containsKey(key)) key: values[key],
+    };
+  }
+
+  String? _optionalString(String key) {
+    if (!containsKey(key)) {
+      return null;
+    }
+    return string(key);
+  }
+}
+
+class WidgetNode {
+  WidgetNode({
+    required this.id,
+    required String type,
+    required double x,
+    required double y,
+    required double width,
+    required double height,
     Map<String, dynamic>? props,
     List<WidgetNode>? children,
-  }) : props = props ?? <String, dynamic>{},
-       children = children ?? <WidgetNode>[];
+  })  : widgetType = WidgetType.fromId(type),
+        frame = NodeFrame(
+          x: x,
+          y: y,
+          width: width,
+          height: height,
+          responsive: readBool(props?['responsive'], true),
+        ),
+        payload = WidgetPayload(props),
+        children = children ?? <WidgetNode>[];
+
+  WidgetNode._({
+    required this.id,
+    required this.widgetType,
+    required this.frame,
+    required this.payload,
+    required this.children,
+  });
 
   final String id;
-  String type;
-  double x;
-  double y;
-  double width;
-  double height;
-  Map<String, dynamic> props;
+  WidgetType widgetType;
+  NodeFrame frame;
+  WidgetPayload payload;
   List<WidgetNode> children;
 
-  String get displayName => props['name']?.toString().isNotEmpty == true
-      ? props['name'].toString()
-      : '$type($id)';
+  String get type => widgetType.id;
+
+  set type(String value) {
+    widgetType = WidgetType.fromId(value);
+  }
+
+  double get x => frame.x;
+
+  set x(double value) {
+    frame = frame.copyWith(x: value);
+  }
+
+  double get y => frame.y;
+
+  set y(double value) {
+    frame = frame.copyWith(y: value);
+  }
+
+  double get width => frame.width;
+
+  set width(double value) {
+    frame = frame.copyWith(width: value);
+  }
+
+  double get height => frame.height;
+
+  set height(double value) {
+    frame = frame.copyWith(height: value);
+  }
+
+  Map<String, dynamic> get props => payload.values;
+
+  set props(Map<String, dynamic> value) {
+    payload = WidgetPayload(value);
+    frame = frame.copyWith(
+        responsive: payload.boolean('responsive', fallback: true));
+  }
+
+  String get displayName {
+    final name = payload.string('name');
+    return name.isNotEmpty ? name : '$type($id)';
+  }
+
+  bool get isButton => widgetType == WidgetType.button;
+  bool get isRadioButton => widgetType == WidgetType.radioButton;
+  bool get isCheckBox => widgetType == WidgetType.checkBox;
+  bool get isSlider =>
+      widgetType == WidgetType.horizontalSlider ||
+      widgetType == WidgetType.verticalSlider;
 
   bool get canHaveChildren {
     return definitionFor(type).canHaveChildren;
@@ -36,15 +341,13 @@ class WidgetNode {
     return definitionFor(type).layoutMode;
   }
 
-  bool get responsive {
-    return _readBool(props['responsive'], true);
-  }
+  bool get responsive => frame.responsive;
 
   set responsive(bool value) {
-    props['responsive'] = value;
+    frame = frame.copyWith(responsive: value);
+    payload['responsive'] = value;
   }
 
-  // 선택된 노드를 복제할 때 하위 트리도 새 id로 복사한다.
   WidgetNode cloneWithNewIds(String Function() createId, {double offset = 16}) {
     final newNode = WidgetNode(
       id: createId(),
@@ -53,40 +356,32 @@ class WidgetNode {
       y: y + offset,
       width: width,
       height: height,
-      props: Map<String, dynamic>.from(props),
+      props: payload.toJson(),
       children: <WidgetNode>[],
     );
-    newNode.props['name'] = newNode.id;
-    newNode.props['memberName'] = newNode.id;
+    newNode.payload['name'] = newNode.id;
+    newNode.payload['memberName'] = newNode.id;
     newNode.children = children
         .map((child) => child.cloneWithNewIds(createId, offset: offset))
         .toList();
     return newNode;
   }
 
-  // JSON IR로 저장하기 위한 Map 형태로 변환한다.
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'type': type,
       'role': canHaveChildren ? 'layout' : 'control',
-      'frame': {
-        'x': x,
-        'y': y,
-        'width': width,
-        'height': height,
-        'responsive': responsive,
-      },
-      'content': _contentProps(),
-      'style': _styleProps(),
-      'layout': _layoutProps(),
-      'behavior': _behaviorProps(),
-      'props': props,
+      'frame': frame.toJson(),
+      'content': payload.contentJson(),
+      'style': payload.toStyle().toJson(),
+      'layout': payload.layoutJson(layoutMode),
+      'behavior': payload.behavior(id).toJson(),
+      'props': payload.toJson(),
       'children': children.map((child) => child.toJson()).toList(),
     };
   }
 
-  // 예전 IR과의 호환을 위해 평면 구조도 필요할 때 사용할 수 있다.
   Map<String, dynamic> toLegacyJson() {
     return {
       'id': id,
@@ -95,30 +390,24 @@ class WidgetNode {
       'y': y,
       'width': width,
       'height': height,
-      'props': props,
+      'props': payload.toJson(),
       'children': children.map((child) => child.toJson()).toList(),
     };
   }
 
-  // JSON IR에서 노드 객체를 복원한다.
   factory WidgetNode.fromJson(Map<String, dynamic> json) {
-    final frame = Map<String, dynamic>.from(
-      json['frame'] as Map? ?? <String, dynamic>{},
-    );
-    final props = <String, dynamic>{};
-    props.addAll(Map<String, dynamic>.from(json['props'] as Map? ?? {}));
-    props.addAll(Map<String, dynamic>.from(json['content'] as Map? ?? {}));
-    props.addAll(Map<String, dynamic>.from(json['style'] as Map? ?? {}));
-    props.addAll(Map<String, dynamic>.from(json['layout'] as Map? ?? {}));
-    props.addAll(Map<String, dynamic>.from(json['behavior'] as Map? ?? {}));
-    return WidgetNode(
+    final payload = <String, dynamic>{};
+    payload.addAll(Map<String, dynamic>.from(json['props'] as Map? ?? {}));
+    payload.addAll(Map<String, dynamic>.from(json['content'] as Map? ?? {}));
+    payload.addAll(Map<String, dynamic>.from(json['style'] as Map? ?? {}));
+    payload.addAll(Map<String, dynamic>.from(json['layout'] as Map? ?? {}));
+    payload.addAll(Map<String, dynamic>.from(json['behavior'] as Map? ?? {}));
+
+    return WidgetNode._(
       id: json['id']?.toString() ?? 'node_0',
-      type: json['type']?.toString() ?? 'container',
-      x: _readDouble(frame['x'] ?? json['x'], 0),
-      y: _readDouble(frame['y'] ?? json['y'], 0),
-      width: _readDouble(frame['width'] ?? json['width'], 120),
-      height: _readDouble(frame['height'] ?? json['height'], 44),
-      props: props,
+      widgetType: WidgetType.fromId(json['type']?.toString()),
+      frame: NodeFrame.fromJson(json, payload),
+      payload: WidgetPayload(payload),
       children: (json['children'] as List? ?? <dynamic>[])
           .whereType<Map>()
           .map(
@@ -128,83 +417,29 @@ class WidgetNode {
           .toList(),
     );
   }
+}
 
-  static double _readDouble(dynamic value, double fallback) {
-    if (value is num) {
-      return value.toDouble();
-    }
-    return double.tryParse(value?.toString() ?? '') ?? fallback;
+double readDouble(dynamic value, double fallback) {
+  if (value is num) {
+    return value.toDouble();
   }
+  return double.tryParse(value?.toString() ?? '') ?? fallback;
+}
 
-  static bool _readBool(dynamic value, bool fallback) {
-    if (value is bool) {
-      return value;
-    }
-    if (value is String) {
-      return value.toLowerCase() == 'true';
-    }
+bool readBool(dynamic value, bool fallback) {
+  if (value is bool) {
+    return value;
+  }
+  if (value is String) {
+    return value.toLowerCase() == 'true';
+  }
+  return fallback;
+}
+
+String _safeMemberName(String value, String fallback) {
+  final compact = value.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '_');
+  if (compact.isEmpty) {
     return fallback;
   }
-
-  Map<String, dynamic> _contentProps() {
-    return {
-      if (props.containsKey('name')) 'name': props['name'],
-      if (props.containsKey('text')) 'text': props['text'],
-      if (props.containsKey('title')) 'title': props['title'],
-      if (props.containsKey('items')) 'items': props['items'],
-      if (props.containsKey('columns')) 'columns': props['columns'],
-      if (props.containsKey('rows')) 'rows': props['rows'],
-      if (props.containsKey('src')) 'src': props['src'],
-      if (props.containsKey('placeholder')) 'placeholder': props['placeholder'],
-      if (props.containsKey('groupName')) 'groupName': props['groupName'],
-      if (props.containsKey('radioValue')) 'radioValue': props['radioValue'],
-      if (props.containsKey('fontFamily')) 'fontFamily': props['fontFamily'],
-      if (props.containsKey('fontSize')) 'fontSize': props['fontSize'],
-      if (props.containsKey('fontWeight')) 'fontWeight': props['fontWeight'],
-      if (props.containsKey('textAlign')) 'textAlign': props['textAlign'],
-    };
-  }
-
-  Map<String, dynamic> _styleProps() {
-    return {
-      if (props.containsKey('color')) 'color': props['color'],
-      if (props.containsKey('backgroundColor'))
-        'backgroundColor': props['backgroundColor'],
-      if (props.containsKey('foregroundColor'))
-        'foregroundColor': props['foregroundColor'],
-      if (props.containsKey('borderColor')) 'borderColor': props['borderColor'],
-      if (props.containsKey('borderRadius'))
-        'borderRadius': props['borderRadius'],
-      if (props.containsKey('padding')) 'padding': props['padding'],
-    };
-  }
-
-  Map<String, dynamic> _layoutProps() {
-    return {
-      'mode': layoutMode.name,
-      if (props.containsKey('gap')) 'gap': props['gap'],
-      if (props.containsKey('mainAxisAlignment'))
-        'mainAxisAlignment': props['mainAxisAlignment'],
-      if (props.containsKey('crossAxisAlignment'))
-        'crossAxisAlignment': props['crossAxisAlignment'],
-    };
-  }
-
-  Map<String, dynamic> _behaviorProps() {
-    return {
-      'memberName': _safeMemberName(
-        props['memberName']?.toString() ?? props['name']?.toString() ?? id,
-      ),
-      'onClick': props['onClick']?.toString() ?? '',
-    };
-  }
-
-  String _safeMemberName(String value) {
-    final compact = value.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '_');
-    if (compact.isEmpty) {
-      return id;
-    }
-    final startsWithNumber = RegExp(r'^[0-9]').hasMatch(compact);
-    return startsWithNumber ? 'control_$compact' : compact;
-  }
+  return RegExp(r'^[0-9]').hasMatch(compact) ? 'control_$compact' : compact;
 }

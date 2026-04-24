@@ -1,10 +1,16 @@
 import 'dart:convert';
-import 'dart:io';
 
 import '../models/export_format.dart';
+import 'document_store.dart';
+import 'local_file_document_store.dart';
 
 // JSON IR과 생성 코드를 파일로 저장하고 읽는다.
 class JsonDocumentService {
+  JsonDocumentService({DocumentStore? documentStore})
+      : documentStore = documentStore ?? const LocalFileDocumentStore();
+
+  final DocumentStore documentStore;
+
   String encodePretty(Map<String, dynamic> document) {
     const encoder = JsonEncoder.withIndent('  ');
     return encoder.convert(document);
@@ -27,20 +33,21 @@ class JsonDocumentService {
     required String jsonText,
     required Map<ExportFormat, Map<String, String>> generatedFiles,
   }) async {
-    final exportDirectory = Directory('exports');
-    if (!exportDirectory.existsSync()) {
-      exportDirectory.createSync(recursive: true);
-    }
+    await documentStore.saveExportBundle(
+      DocumentExportBundle(
+        jsonText: jsonText,
+        generatedFiles: generatedFiles,
+        readmeText: _buildExportReadme(),
+      ),
+    );
+  }
 
-    await File('exports/page_ir.json').writeAsString(jsonText);
-    await File('exports/README.md').writeAsString(_buildExportReadme());
-    for (final entry in generatedFiles.entries) {
-      for (final fileEntry in entry.value.entries) {
-        final file = File('exports/${fileEntry.key}');
-        file.parent.createSync(recursive: true);
-        await file.writeAsString(fileEntry.value);
-      }
+  Future<Map<String, dynamic>?> loadJsonDocument(String relativePath) async {
+    final jsonText = await documentStore.readText(relativePath);
+    if (jsonText == null) {
+      return null;
     }
+    return decode(jsonText);
   }
 
   String _buildExportReadme() {
@@ -108,7 +115,7 @@ Python 의존성과 Flutter SDK 준비:
 exports\\tools\\install_export_python_deps.cmd
 ```
 
-이 스크립트는 `flet`, `PyQt6`를 설치하고, 프로젝트 루트에 `.flutter-sdk/flutter`가 없으면 GitHub stable Flutter SDK를 clone합니다.
+이 스크립트는 `flet==0.82.2`, `PyQt6==6.11.0`를 설치하고, 프로젝트 루트에 `.flutter-sdk/flutter`가 없으면 GitHub stable Flutter SDK를 clone합니다.
 
 ## 생성 클래스 수명주기
 

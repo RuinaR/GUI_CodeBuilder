@@ -1,4 +1,4 @@
-﻿import '../models/export_format.dart';
+import '../models/export_format.dart';
 import '../models/ir_document.dart';
 import '../models/widget_node.dart';
 import 'code_exporter.dart';
@@ -86,6 +86,18 @@ button, select, textarea, input[type="text"], input[type="number"], input[type="
   box-sizing: border-box;
 }
 
+.tabs {
+  display: flex;
+  gap: 4px;
+  height: 32px;
+  padding: 4px;
+}
+
+.tabs button {
+  width: auto;
+  height: 24px;
+}
+
 label.control-label {
   display: flex;
   align-items: center;
@@ -158,7 +170,7 @@ $space</div>''';
     };
     void collect(WidgetNode node) {
       final member = _memberName(node);
-      if (node.type == 'button') {
+      if (node.isButton) {
         lines.add(
           "${' ' * indent}this.controls['$member']?.querySelector('button')?.addEventListener('click', this.${_eventHandlerName(node, 'onClick')}.bind(this));",
         );
@@ -196,7 +208,7 @@ $space</div>''';
     };
     void collect(WidgetNode node) {
       final space = ' ' * indent;
-      if (node.type == 'button') {
+      if (node.isButton) {
         lines.add(
             "$space${_eventHandlerName(node, 'onClick')}(event) {\n$space  // 여기에 ${_memberName(node)}의 클릭 이벤트를 구현합니다.\n$space}");
       } else if (changeTypes.contains(node.type)) {
@@ -217,8 +229,10 @@ $space</div>''';
   String _table(WidgetNode node, int indent) {
     final space = ' ' * indent;
     final childSpace = ' ' * (indent + 2);
-    final columns = _csv(node.props['columns']?.toString() ?? 'Name,Value');
-    final rows = (node.props['rows']?.toString() ?? '')
+    final columns =
+        _csv(node.payload.string('columns', fallback: 'Name,Value'));
+    final rows = node.payload
+        .string('rows')
         .split(';')
         .where((row) => row.trim().isNotEmpty)
         .map(_csv)
@@ -254,33 +268,30 @@ $space</table>''';
       .toList();
 
   String _radioGroupName(WidgetNode node) =>
-      node.props['groupName']?.toString().isNotEmpty == true
-          ? node.props['groupName'].toString()
+      node.payload.string('groupName').isNotEmpty
+          ? node.payload.string('groupName')
           : 'default';
 
   String _radioValue(WidgetNode node) =>
-      node.props['radioValue']?.toString().isNotEmpty == true
-          ? node.props['radioValue'].toString()
+      node.payload.string('radioValue').isNotEmpty
+          ? node.payload.string('radioValue')
           : node.id;
 
   String _style(WidgetNode node) {
-    final bg = node.props['backgroundColor']?.toString() ?? 'transparent';
-    final border = node.props['borderColor']?.toString() ?? '#cbd5e1';
-    final radius = node.props['borderRadius'] ?? 0;
-    return 'background:$bg;border:1px solid $border;border-radius:${radius}px;';
+    final bg = node.payload.string('backgroundColor', fallback: 'transparent');
+    final border = node.payload.string('borderColor', fallback: '#cbd5e1');
+    final radius = node.payload.number('borderRadius');
+    final overflow = node.type == 'scrollArea' ? 'overflow:auto;' : '';
+    return 'background:$bg;border:1px solid $border;border-radius:${radius}px;$overflow';
   }
 
-  List<String> _items(WidgetNode node) =>
-      (node.props['items']?.toString() ?? '')
-          .split(',')
-          .map((item) => item.trim())
-          .where((item) => item.isNotEmpty)
-          .toList();
+  List<String> _items(WidgetNode node) => node.payload.csv('items');
 
   String _memberName(WidgetNode node) {
-    final raw = node.props['memberName']?.toString() ??
-        node.props['name']?.toString() ??
-        node.id;
+    final raw = node.payload.string(
+      'memberName',
+      fallback: node.payload.string('name', fallback: node.id),
+    );
     final compact = raw.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '_');
     return compact.isEmpty ? node.id : compact;
   }

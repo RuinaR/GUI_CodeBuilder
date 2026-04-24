@@ -33,6 +33,7 @@ GUICodeBuilder\build\windows\x64\runner\Release\gui_code_builder.exe
 - Qt 6.11.0
 
 이 프로젝트의 exporter는 위 버전 기준 API에 맞춰져 있습니다. 특히 Flutter Radio는 RadioGroup<String>, Flet Radio는 ft.RadioGroup(content=ft.Radio(...)) 구조를 사용합니다.
+생성되는 Python export 의존성 파일은 Flet을 `flet==0.82.2`로 고정합니다.
 
 ## Export 구조
 
@@ -45,6 +46,7 @@ exports\flet_generated_page.py
 exports\pyqt_generated_page.py
 exports\html_generated_page.html
 exports\html_generated_page.css
+exports\requirements_export.txt
 exports\test_mains\run_flutter_test.cmd
 exports\test_mains\run_flet_test.cmd
 exports\test_mains\run_pyqt_test.cmd
