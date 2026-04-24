@@ -22,7 +22,7 @@ class FletTypedGenerator extends FletWidgetGenerator {
 }
 
 final _fletWidgetGenerators = <FletWidgetGenerator>[
-  FletTypedGenerator({'text'}, (e, n, i) => e._exportText(n, i)),
+  FletTypedGenerator({'label', 'text'}, (e, n, i) => e._exportText(n, i)),
   FletTypedGenerator({'button'}, (e, n, i) => e._exportButton(n, i)),
   FletTypedGenerator({'container'}, (e, n, i) => e._exportContainer(n, i)),
   FletTypedGenerator({'groupBox'}, (e, n, i) => e._exportGroupBox(n, i)),

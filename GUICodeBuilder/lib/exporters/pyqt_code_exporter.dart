@@ -40,6 +40,8 @@ class ${className}PyQtWindow(QtWidgets.QWidget):
         super().__init__()
         self.setWindowTitle("Generated Page")
         self.resize($width, $height)
+        self.setFont(QtGui.QFont("Segoe UI", 10))
+        self.setStyleSheet(${_multilineQuote(_baseStyleSheet())})
 ${_exportMembers(nodes)}
         self.radio_groups = {}
 
@@ -202,7 +204,37 @@ pause
       final color = node.payload.string('color', fallback: '#111827');
       final fontSize =
           _formatNumber(node.payload.number('fontSize', fallback: 16));
-      return 'self.$name.setStyleSheet(${_quote('color: $color; font-size: ${fontSize}px;')})';
+      final fontFamily =
+          node.payload.string('fontFamily', fallback: 'Segoe UI');
+      final pointSize = _fontPointSize(
+        node.payload.number('fontSize', fallback: 16),
+      );
+      return 'self.$name.setFont(QtGui.QFont(${_quote(fontFamily)}, $pointSize))\n        self.$name.setStyleSheet(${_quote('QLabel { color: $color; font-size: ${fontSize}px; font-family: "$fontFamily"; background-color: transparent; border: none; padding: 0px; }')})';
+    }
+    if (node.isButton) {
+      final background =
+          node.payload.string('backgroundColor', fallback: '#2563EB');
+      final foreground =
+          node.payload.string('foregroundColor', fallback: '#FFFFFF');
+      final lightButton = _isLightColor(background);
+      final border = lightButton ? '#94A3B8' : '#1D4ED8';
+      final hover = lightButton ? '#F8FAFC' : '#1D4ED8';
+      final pressed = lightButton ? '#E2E8F0' : '#1E40AF';
+      final radius =
+          _formatNumber(node.payload.number('borderRadius', fallback: 6));
+      return 'self.$name.setStyleSheet(${_quote('QPushButton { background-color: $background; color: $foreground; border: 1px solid $border; border-radius: ${radius}px; padding: 6px 10px; font-weight: 600; } QPushButton:hover { background-color: $hover; } QPushButton:pressed { background-color: $pressed; padding-top: 7px; padding-left: 11px; } QPushButton:focus { outline: none; border: 2px solid #93C5FD; }')})';
+    }
+    if (node.isCheckBox || node.isRadioButton) {
+      final color = node.payload.string('color', fallback: '#111827');
+      return 'self.$name.setStyleSheet(${_quote('color: $color; spacing: 8px;')})';
+    }
+    if (node.widgetType == WidgetType.lineEdit ||
+        node.widgetType == WidgetType.textBox ||
+        node.widgetType == WidgetType.spinBox ||
+        node.widgetType == WidgetType.doubleSpinBox ||
+        node.widgetType == WidgetType.comboBox ||
+        node.widgetType == WidgetType.groupBox) {
+      return '';
     }
     final background =
         node.payload.string('backgroundColor', fallback: '#FFFFFF');
@@ -211,6 +243,96 @@ pause
     final radius = _formatNumber(node.payload.number('borderRadius'));
     final textColor = foreground.isEmpty ? '' : ' color: $foreground;';
     return 'self.$name.setStyleSheet(${_quote('background-color: $background; border: 1px solid $border; border-radius: ${radius}px;$textColor')})';
+  }
+
+  String _baseStyleSheet() {
+    return '''
+QWidget {
+  color: #111827;
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 14px;
+  -qt-font-smoothing-type: antialias;
+}
+QPushButton {
+  min-height: 24px;
+}
+QLineEdit, QTextEdit, QSpinBox, QDoubleSpinBox, QComboBox {
+  background-color: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 4px;
+  padding: 4px 6px;
+  selection-background-color: #BFDBFE;
+}
+QLineEdit:focus, QTextEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
+  border: 2px solid #2563EB;
+}
+QCheckBox, QRadioButton {
+  min-height: 24px;
+  spacing: 8px;
+}
+QCheckBox::indicator, QRadioButton::indicator {
+  width: 16px;
+  height: 16px;
+}
+QCheckBox::indicator:unchecked {
+  border: 1px solid #64748B;
+  background: #FFFFFF;
+}
+QCheckBox::indicator:checked {
+  border: 1px solid #1D4ED8;
+  background: #2563EB;
+}
+QRadioButton::indicator:unchecked {
+  border: 1px solid #64748B;
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+QRadioButton::indicator:checked {
+  border: 5px solid #2563EB;
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+QCheckBox:hover, QRadioButton:hover {
+  color: #1D4ED8;
+}
+QTableWidget {
+  gridline-color: #CBD5E1;
+  selection-background-color: #DBEAFE;
+}
+QHeaderView::section {
+  background-color: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  padding: 4px;
+}
+QGroupBox {
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  margin-top: 8px;
+  padding: 8px;
+  font-weight: 600;
+}
+QGroupBox::title {
+  subcontrol-origin: margin;
+  left: 8px;
+  padding: 0 4px;
+}
+''';
+  }
+
+  bool _isLightColor(String hexColor) {
+    final normalized = hexColor.replaceAll('#', '').toUpperCase();
+    if (normalized.length != 6) {
+      return false;
+    }
+    final red = int.tryParse(normalized.substring(0, 2), radix: 16) ?? 0;
+    final green = int.tryParse(normalized.substring(2, 4), radix: 16) ?? 0;
+    final blue = int.tryParse(normalized.substring(4, 6), radix: 16) ?? 0;
+    return red + green + blue > 660;
+  }
+
+  int _fontPointSize(double pixelSize) {
+    final points = (pixelSize * 0.75).round();
+    return points < 9 ? 9 : points;
   }
 
   List<String> _items(WidgetNode node) => node.payload.csv('items');
@@ -318,6 +440,12 @@ pause
 
   String _quote(String text) {
     return '"${text.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"';
+  }
+
+  String _multilineQuote(String text) {
+    final escaped =
+        text.replaceAll('\\', '\\\\').replaceAll('"""', '\\"\\"\\"').trim();
+    return '"""$escaped"""';
   }
 
   String _radioGroupName(WidgetNode node) =>

@@ -80,10 +80,49 @@ body {
   overflow: hidden;
 }
 
+.generated-label {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  color: #111827;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
 button, select, textarea, input[type="text"], input[type="number"], input[type="range"], progress, table {
   width: 100%;
   height: 100%;
   box-sizing: border-box;
+}
+
+button, select, textarea, input[type="text"], input[type="number"] {
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #111827;
+}
+
+button {
+  cursor: pointer;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+button:hover { background: #1d4ed8; }
+button:active { background: #1e40af; transform: translateY(1px); }
+
+button:focus-visible, select:focus-visible, textarea:focus-visible,
+input[type="text"]:focus-visible, input[type="number"]:focus-visible,
+input[type="range"]:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+input[type="checkbox"], input[type="radio"], input[type="range"], progress {
+  accent-color: #2563eb;
 }
 
 .tabs {
@@ -96,7 +135,14 @@ button, select, textarea, input[type="text"], input[type="number"], input[type="
 .tabs button {
   width: auto;
   height: 24px;
+  background: #f8fafc;
+  color: #111827;
+  border-color: #cbd5e1;
+  font-weight: 500;
 }
+
+.tabs button:hover { background: #e0f2fe; }
+.tabs button:active { background: #bae6fd; }
 
 label.control-label {
   display: flex;
@@ -125,6 +171,8 @@ input.vertical-slider {
 textarea { resize: none; }
 table { border-collapse: collapse; font-size: 13px; }
 th, td { border: 1px solid #cbd5e1; padding: 4px 6px; text-align: left; }
+tbody tr:nth-child(even) { background: #f8fafc; }
+tbody tr:hover { background: #eff6ff; }
 img { display: block; }
 ''';
   }

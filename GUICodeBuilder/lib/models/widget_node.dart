@@ -29,6 +29,9 @@ enum WidgetType {
   final String id;
 
   static WidgetType fromId(String? id) {
+    if (id == 'text') {
+      return label;
+    }
     for (final type in values) {
       if (type.id == id) {
         return type;

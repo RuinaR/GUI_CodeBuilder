@@ -313,21 +313,30 @@ $space)''';
 
   String _exportSlider(WidgetNode node, int indent, bool vertical) {
     final space = ' ' * indent;
+    final (min, max) = _sliderRange(node);
+    final value = node.payload.number('value').clamp(min, max);
     if (!vertical) {
       return '''ft.Slider(
-$space    value=${_formatNumber(node.payload.number('value'))},
-$space    min=${_formatNumber(node.payload.number('min'))},
-$space    max=${_formatNumber(node.payload.number('max', fallback: 100))},
+$space    value=${_formatNumber(value)},
+$space    min=${_formatNumber(min)},
+$space    max=${_formatNumber(max)},
+$space    width=${_formatNumber(node.width)},
 $space    on_change=self.${_eventHandlerName(node, 'on_change')},
 $space)''';
     }
     return '''ft.Container(
+$space    width=${_formatNumber(node.width)},
+$space    height=${_formatNumber(node.height)},
+$space    alignment=ft.Alignment(0, 0),
+$space    clip_behavior=ft.ClipBehavior.NONE,
 $space    content=ft.Slider(
-$space        value=${_formatNumber(node.payload.number('value'))},
-$space        min=${_formatNumber(node.payload.number('min'))},
-$space        max=${_formatNumber(node.payload.number('max', fallback: 100))},
+$space        value=${_formatNumber(value)},
+$space        min=${_formatNumber(min)},
+$space        max=${_formatNumber(max)},
+$space        width=${_formatNumber(node.height)},
+$space        height=${_formatNumber(node.width)},
 $space        on_change=self.${_eventHandlerName(node, 'on_change')},
-$space        rotate=ft.Rotate(angle=-1.5708),
+$space        rotate=ft.Rotate(angle=-1.5708, alignment=ft.Alignment(0, 0)),
 $space    ),
 $space)''';
   }
@@ -628,6 +637,13 @@ $space)''';
       return '0';
     }
     return (value / max).clamp(0, 1).toStringAsFixed(3);
+  }
+
+  (double, double) _sliderRange(WidgetNode node) {
+    final min = node.payload.number('min');
+    final rawMax = node.payload.number('max', fallback: 100);
+    final max = rawMax <= min ? min + 1 : rawMax;
+    return (min, max);
   }
 
   String _safeClassName(String name) {

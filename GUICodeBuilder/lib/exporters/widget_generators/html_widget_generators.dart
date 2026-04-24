@@ -23,6 +23,10 @@ class HtmlTypedGenerator extends HtmlWidgetGenerator {
 
 final _htmlWidgetGenerators = <HtmlWidgetGenerator>[
   HtmlTypedGenerator(
+      {'label', 'text'},
+      (e, n, i) =>
+          '${' ' * i}<div class="generated-label">${e._escape(n.payload.string('text', fallback: n.displayName))}</div>'),
+  HtmlTypedGenerator(
       {'button'},
       (e, n, i) =>
           '${' ' * i}<button>${e._escape(n.payload.string('text', fallback: n.displayName))}</button>'),

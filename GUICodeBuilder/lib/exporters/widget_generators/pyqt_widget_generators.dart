@@ -22,9 +22,9 @@ class PyQtTypedGenerator extends PyQtWidgetGenerator {
 }
 
 final _pyqtWidgetGenerators = <PyQtWidgetGenerator>[
-  PyQtTypedGenerator({'text'}, (e, n, p) {
+  PyQtTypedGenerator({'label', 'text'}, (e, n, p) {
     final name = e._memberName(n);
-    return 'self.$name = QtWidgets.QLabel(${e._quote(n.payload.string('text'))}, $p)';
+    return 'self.$name = QtWidgets.QLabel(${e._quote(n.payload.string('text'))}, $p)\n        self.$name.setTextFormat(QtCore.Qt.TextFormat.PlainText)\n        self.$name.setWordWrap(True)\n        self.$name.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)';
   }),
   PyQtTypedGenerator({'button'}, (e, n, p) {
     final name = e._memberName(n);

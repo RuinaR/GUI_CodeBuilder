@@ -22,7 +22,7 @@ class FlutterTypedGenerator extends FlutterWidgetGenerator {
 }
 
 final _flutterWidgetGenerators = <FlutterWidgetGenerator>[
-  FlutterTypedGenerator({'text'}, (e, n, i) => e._exportText(n, i)),
+  FlutterTypedGenerator({'label', 'text'}, (e, n, i) => e._exportText(n, i)),
   FlutterTypedGenerator({'button'}, (e, n, i) => e._exportButton(n, i)),
   FlutterTypedGenerator({'container'}, (e, n, i) => e._exportContainer(n, i)),
   FlutterTypedGenerator({'groupBox'}, (e, n, i) => e._exportGroupBox(n, i)),

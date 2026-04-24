@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -25,6 +27,10 @@ class EditorScreen extends StatefulWidget {
 }
 
 class _EditorScreenState extends State<EditorScreen> {
+  static const MethodChannel _fileDropChannel = MethodChannel(
+    'gui_code_builder/file_drop',
+  );
+
   final EditorState _editorState = EditorState();
   final CanvasWidgetRenderer _renderer = CanvasWidgetRenderer();
   final JsonDocumentService _jsonService = JsonDocumentService();
@@ -40,6 +46,38 @@ class _EditorScreenState extends State<EditorScreen> {
   double _rightPaneWidth = 340;
   double _exportPreviewHeight = 190;
   double _treePaneHeight = 320;
+  void Function(List<String> paths)? _activeJsonDropHandler;
+
+  @override
+  void initState() {
+    super.initState();
+    _fileDropChannel.setMethodCallHandler(_handleFileDropMethodCall);
+  }
+
+  @override
+  void dispose() {
+    _fileDropChannel.setMethodCallHandler(null);
+    super.dispose();
+  }
+
+  Future<void> _handleFileDropMethodCall(MethodCall call) async {
+    if (call.method != 'filesDropped') {
+      return;
+    }
+    final paths = (call.arguments as List? ?? <dynamic>[])
+        .whereType<String>()
+        .toList(growable: false);
+    final handler = _activeJsonDropHandler;
+    if (handler != null) {
+      handler(paths);
+      return;
+    }
+    if (paths.any((path) => path.toLowerCase().endsWith('.json')) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Press Load JSON, then drop the file.')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,8 +96,8 @@ class _EditorScreenState extends State<EditorScreen> {
                 axis: Axis.vertical,
                 onDrag: (delta) {
                   setState(() {
-                    _exportPreviewHeight = (_exportPreviewHeight - delta.dy)
-                        .clamp(120, 420);
+                    _exportPreviewHeight =
+                        (_exportPreviewHeight - delta.dy).clamp(120, 420);
                   });
                 },
               ),
@@ -304,8 +342,7 @@ class _EditorScreenState extends State<EditorScreen> {
       _deleteSelected();
       return;
     }
-    final isUndo =
-        event.logicalKey == LogicalKeyboardKey.keyZ &&
+    final isUndo = event.logicalKey == LogicalKeyboardKey.keyZ &&
         (HardwareKeyboard.instance.isControlPressed ||
             HardwareKeyboard.instance.isMetaPressed);
     if (isUndo) {
@@ -356,52 +393,211 @@ class _EditorScreenState extends State<EditorScreen> {
     });
   }
 
+  Future<void> _loadJsonText(String jsonText) async {
+    final trimmed = jsonText.trim();
+    if (trimmed.isEmpty) {
+      throw const FormatException('JSON content is empty.');
+    }
+    final document = _jsonService.decode(trimmed);
+    setState(() {
+      _editorState.loadIrJson(document);
+      _editorState.exportedJson = _jsonService.encodePretty(document);
+      _editorState.exportedCodes.clear();
+      _previewFormat = ExportFormat.flutter;
+    });
+  }
+
+  Future<String> _readDroppedJsonFile(List<String> paths) async {
+    if (paths.isEmpty) {
+      throw const FormatException('Drop a JSON file to load.');
+    }
+    final jsonFiles = paths.where((path) {
+      return path.toLowerCase().endsWith('.json');
+    }).toList();
+    if (jsonFiles.isEmpty) {
+      throw const FormatException('Only .json files can be loaded.');
+    }
+    if (jsonFiles.length > 1) {
+      throw const FormatException('Drop one JSON file at a time.');
+    }
+    final file = File(jsonFiles.single);
+    if (!file.existsSync()) {
+      throw const FileSystemException('JSON file does not exist.');
+    }
+    return file.readAsString();
+  }
+
   void _showLoadJsonDialog() {
     final controller = TextEditingController(text: _editorState.exportedJson);
     showDialog<void>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Load JSON IR'),
-          content: SizedBox(
-            width: 720,
-            child: TextField(
-              controller: controller,
-              minLines: 14,
-              maxLines: 14,
-              decoration: const InputDecoration(border: OutlineInputBorder()),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final document = _jsonService.decode(controller.text);
-                setState(() {
-                  _editorState.loadIrJson(document);
-                  _editorState.exportedJson = controller.text;
-                  _editorState.exportedCodes
-                    ..clear()
-                    ..addEntries(
-                      _exporters.map(
-                        (exporter) => MapEntry(
-                          exporter.format.name,
-                          exporter.exportPage(document),
+        var isDragging = false;
+        var isLoading = false;
+        String? errorText;
+        String? loadedFileName;
+
+        Future<bool> loadText(
+          String jsonText,
+          StateSetter setDialogState,
+        ) async {
+          final navigator = Navigator.of(context);
+          final messenger = ScaffoldMessenger.of(this.context);
+          setDialogState(() {
+            isLoading = true;
+            errorText = null;
+          });
+          try {
+            await _loadJsonText(jsonText);
+            setDialogState(() => isLoading = false);
+            if (mounted) {
+              navigator.pop();
+              messenger.showSnackBar(
+                const SnackBar(
+                  content:
+                      Text('JSON loaded. Press Export when you need files.'),
+                ),
+              );
+            }
+            return true;
+          } on FormatException catch (error) {
+            setDialogState(() {
+              errorText = error.message;
+              isLoading = false;
+            });
+            return false;
+          } on Exception catch (error) {
+            setDialogState(() {
+              errorText = error.toString();
+              isLoading = false;
+            });
+            return false;
+          }
+        }
+
+        Future<void> loadDroppedFiles(
+          List<String> paths,
+          StateSetter setDialogState,
+        ) async {
+          setDialogState(() {
+            isLoading = true;
+            errorText = null;
+            loadedFileName = null;
+          });
+          try {
+            final jsonFiles = paths
+                .where((path) => path.toLowerCase().endsWith('.json'))
+                .toList();
+            final jsonText = await _readDroppedJsonFile(paths);
+            loadedFileName =
+                jsonFiles.single.split(Platform.pathSeparator).last;
+            controller.text = jsonText;
+            final didLoad = await loadText(jsonText, setDialogState);
+            if (didLoad) {
+              return;
+            }
+          } on FormatException catch (error) {
+            setDialogState(() => errorText = error.message);
+          } on Exception catch (error) {
+            setDialogState(() => errorText = error.toString());
+          }
+          setDialogState(() {
+            isDragging = false;
+            isLoading = false;
+          });
+        }
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            _activeJsonDropHandler = (paths) {
+              loadDroppedFiles(paths, setDialogState);
+            };
+            final borderColor = errorText != null
+                ? const Color(0xFFDC2626)
+                : isDragging
+                    ? const Color(0xFF2563EB)
+                    : const Color(0xFFCBD5E1);
+            return AlertDialog(
+              title: const Text('Load JSON IR'),
+              content: SizedBox(
+                width: 760,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 120),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: isDragging
+                            ? const Color(0xFFEFF6FF)
+                            : const Color(0xFFF8FAFC),
+                        border: Border.all(color: borderColor, width: 1.5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            isLoading
+                                ? 'Loading JSON...'
+                                : 'Drop a page_ir.json file here',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            loadedFileName == null
+                                ? 'The page is rebuilt from JSON. Export is not run automatically.'
+                                : loadedFileName!,
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: controller,
+                      minLines: 12,
+                      maxLines: 12,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Or paste JSON IR here',
+                      ),
+                    ),
+                    if (errorText != null) ...[
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          errorText!,
+                          style: const TextStyle(color: Color(0xFFDC2626)),
                         ),
                       ),
-                    );
-                });
-                Navigator.of(context).pop();
-              },
-              child: const Text('Load'),
-            ),
-          ],
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed:
+                      isLoading ? null : () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: isLoading
+                      ? null
+                      : () => loadText(controller.text, setDialogState),
+                  child: const Text('Load'),
+                ),
+              ],
+            );
+          },
         );
       },
-    );
+    ).whenComplete(() {
+      _activeJsonDropHandler = null;
+    });
   }
 
   void _refresh() {

@@ -1,8 +1,14 @@
 #include "flutter_window.h"
 
+#include <shellapi.h>
+
 #include <optional>
+#include <vector>
 
 #include "flutter/generated_plugin_registrant.h"
+#include "flutter/method_call.h"
+#include "flutter/standard_method_codec.h"
+#include "utils.h"
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -25,6 +31,12 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
+  file_drop_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(),
+          "gui_code_builder/file_drop",
+          &flutter::StandardMethodCodec::GetInstance());
+  DragAcceptFiles(GetHandle(), TRUE);
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -43,6 +55,7 @@ void FlutterWindow::OnDestroy() {
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
+  file_drop_channel_ = nullptr;
 
   Win32Window::OnDestroy();
 }
@@ -62,6 +75,24 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   }
 
   switch (message) {
+    case WM_DROPFILES: {
+      HDROP drop = reinterpret_cast<HDROP>(wparam);
+      UINT file_count = DragQueryFileW(drop, 0xFFFFFFFF, nullptr, 0);
+      flutter::EncodableList paths;
+      for (UINT i = 0; i < file_count; ++i) {
+        UINT path_length = DragQueryFileW(drop, i, nullptr, 0);
+        std::vector<wchar_t> path(path_length + 1);
+        DragQueryFileW(drop, i, path.data(), static_cast<UINT>(path.size()));
+        paths.push_back(flutter::EncodableValue(Utf8FromUtf16(path.data())));
+      }
+      DragFinish(drop);
+      if (file_drop_channel_) {
+        file_drop_channel_->InvokeMethod(
+            "filesDropped",
+            std::make_unique<flutter::EncodableValue>(std::move(paths)));
+      }
+      return 0;
+    }
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();
       break;

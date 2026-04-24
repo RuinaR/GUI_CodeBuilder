@@ -52,6 +52,16 @@ void main() {
       expect(code, contains('on_select=self.modeSelect_on_select'));
       expect(code, contains('on_change=self.usernameInput_on_change'));
       expect(code, contains('on_change=self.volumeSlider_on_change'));
+      expect(code, contains('min=0'));
+      expect(code, contains('max=100'));
+      expect(code, contains('width=260'));
+      expect(code, contains('alignment=ft.Alignment(0, 0)'));
+      expect(code, contains('clip_behavior=ft.ClipBehavior.NONE'));
+      expect(
+          code,
+          contains(
+              'rotate=ft.Rotate(angle=-1.5708, alignment=ft.Alignment(0, 0))'));
+      expect(code, contains('width=140'));
       expect(code, contains('ft.DataTable('));
       expect(code, contains('ft.Tabs('));
       expect(code, contains('ft.TabBarView('));
@@ -76,6 +86,18 @@ void main() {
       expect(code, contains('QtWidgets.QPushButton("Run"'));
       expect(code, contains('QtWidgets.QButtonGroup(self)'));
       expect(code, contains('self.radio_groups["choices"].setExclusive(True)'));
+      expect(code, contains('self.setFont(QtGui.QFont("Segoe UI", 10))'));
+      expect(code, contains('self.setStyleSheet('));
+      expect(code, contains('QPushButton:hover'));
+      expect(code, contains('QPushButton:pressed'));
+      expect(code, contains('-qt-font-smoothing-type: antialias'));
+      expect(code, contains('font-family: "Segoe UI", Arial, sans-serif'));
+      expect(code, contains('setTextFormat(QtCore.Qt.TextFormat.PlainText)'));
+      expect(code, contains('setWordWrap(True)'));
+      expect(code, contains('QtCore.Qt.AlignmentFlag.AlignVCenter'));
+      expect(code, contains('QCheckBox::indicator:checked'));
+      expect(code, contains('QRadioButton::indicator:checked'));
+      expect(code, contains('QLineEdit:focus'));
       expect(code, contains('self.enableFeature.setChecked(True)'));
       expect(code, contains('self.modeSelect.setCurrentText("Manual")'));
       expect(
@@ -123,8 +145,37 @@ void main() {
       expect(html, contains('data-member="mainTabs"'));
       expect(html, contains('data-member="scrollRegion"'));
       expect(css, contains('.page {'));
+      expect(css, contains('.generated-label'));
       expect(css, contains('input.vertical-slider'));
+      expect(css, contains('button:hover'));
+      expect(css, contains('button:active'));
+      expect(css, contains('focus-visible'));
+      expect(css, contains('accent-color: #2563eb'));
+      expect(css, contains('tbody tr:hover'));
+      expect(css, contains('.tabs button:hover'));
     });
+  });
+
+  test('exporters treat label and legacy text nodes as labels', () {
+    final ir = _labelCompatibilityIr();
+
+    final flutterCode = _normalized(FlutterCodeExporter().exportPage(ir));
+    final fletCode = _normalized(FletCodeExporter().exportPage(ir));
+    final pyqtCode = _normalized(PyQtCodeExporter().exportPage(ir));
+    final htmlCode = _normalized(HtmlCssExporter().exportPage(ir));
+
+    expect(flutterCode, contains("Text( 'Modern label'"));
+    expect(flutterCode, contains("Text( 'Legacy text label'"));
+    expect(fletCode, contains('ft.Text('));
+    expect(fletCode, contains('value="Modern label"'));
+    expect(fletCode, contains('value="Legacy text label"'));
+    expect(pyqtCode, contains('QtWidgets.QLabel("Modern label"'));
+    expect(pyqtCode, contains('QtWidgets.QLabel("Legacy text label"'));
+    expect(htmlCode, contains('class="generated-label">Modern label</div>'));
+    expect(
+      htmlCode,
+      contains('class="generated-label">Legacy text label</div>'),
+    );
   });
 }
 
@@ -348,7 +399,7 @@ Map<String, dynamic> _representativeIr() {
         children: [
           _node(
             id: 'node_17_1',
-            type: 'text',
+            type: 'label',
             memberName: 'tabLabel',
             x: 12,
             y: 44,
@@ -380,7 +431,7 @@ Map<String, dynamic> _representativeIr() {
             children: [
               _node(
                 id: 'node_18_1_1',
-                type: 'text',
+                type: 'label',
                 memberName: 'scrollLabel',
                 x: 0,
                 y: 0,
@@ -423,6 +474,39 @@ Map<String, dynamic> _representativeIr() {
             props: {'text': 'Row'},
           ),
         ],
+      ),
+    ],
+  };
+}
+
+Map<String, dynamic> _labelCompatibilityIr() {
+  return {
+    'page': {
+      'className': 'LabelCompatibilityPage',
+      'title': 'Label Compatibility Page',
+      'width': 320,
+      'height': 160,
+    },
+    'nodes': [
+      _node(
+        id: 'label_modern',
+        type: 'label',
+        memberName: 'modernLabel',
+        x: 16,
+        y: 16,
+        width: 180,
+        height: 32,
+        props: {'text': 'Modern label', 'fontSize': 18},
+      ),
+      _node(
+        id: 'label_legacy',
+        type: 'text',
+        memberName: 'legacyTextLabel',
+        x: 16,
+        y: 64,
+        width: 180,
+        height: 32,
+        props: {'text': 'Legacy text label', 'fontSize': 18},
       ),
     ],
   };
