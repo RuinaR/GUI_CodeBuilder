@@ -1,0 +1,14 @@
+.dart-home/
+.dart_tool/
+.flutter-sdk/
+build/
+.idea/
+*.iml
+exports/
+*.lnk
+.flutter-plugins
+.flutter-plugins-dependencies
+__pycache__/
+*.pyc
+.venv/
+venv/

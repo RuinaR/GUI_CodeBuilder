@@ -1,0 +1,12 @@
+{
+  "name": "GUI Code Builder",
+  "short_name": "GUI Builder",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#F3F4F6",
+  "theme_color": "#2563EB",
+  "description": "Flutter GUI code builder with JSON IR export.",
+  "orientation": "landscape-primary",
+  "prefer_related_applications": false,
+  "icons": []
+}
