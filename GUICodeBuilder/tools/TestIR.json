@@ -1,0 +1,1076 @@
+{
+  "schemaVersion": 3,
+  "generator": {
+    "name": "GUI Code Builder",
+    "irPurpose": "single source for Flutter, Flet, PyQt, and HTML/CSS exporters"
+  },
+  "page": {
+    "className": "GeneratedPage",
+    "title": "Generated Page",
+    "width": 960.0,
+    "height": 640.0,
+    "responsive": true,
+    "coordinateSystem": "logicalPixels"
+  },
+  "exportTargets": [
+    "flutter",
+    "flet",
+    "pyqt",
+    "html"
+  ],
+  "nodes": [
+    {
+      "id": "node_1",
+      "type": "button",
+      "role": "control",
+      "frame": {
+        "x": 24.0,
+        "y": 24.0,
+        "width": 160.0,
+        "height": 48.0,
+        "responsive": true
+      },
+      "content": {
+        "name": "node_1",
+        "text": "Button",
+        "fontFamily": "Arial",
+        "fontSize": 14
+      },
+      "style": {
+        "color": "#111827",
+        "backgroundColor": "#2563EB",
+        "foregroundColor": "#FFFFFF",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0
+      },
+      "layout": {
+        "mode": "absolute"
+      },
+      "behavior": {
+        "memberName": "node_1",
+        "onClick": ""
+      },
+      "props": {
+        "name": "node_1",
+        "memberName": "node_1",
+        "responsive": true,
+        "fontSize": 14,
+        "fontFamily": "Arial",
+        "color": "#111827",
+        "backgroundColor": "#2563EB",
+        "foregroundColor": "#FFFFFF",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0,
+        "onClick": "",
+        "text": "Button",
+        "mode": "absolute"
+      },
+      "children": []
+    },
+    {
+      "id": "node_2",
+      "type": "radioButton",
+      "role": "control",
+      "frame": {
+        "x": 24.0,
+        "y": 104.0,
+        "width": 190.0,
+        "height": 40.0,
+        "responsive": true
+      },
+      "content": {
+        "name": "node_2",
+        "text": "Radio",
+        "groupName": "default",
+        "radioValue": "node_2",
+        "fontFamily": "Arial",
+        "fontSize": 14
+      },
+      "style": {
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0
+      },
+      "layout": {
+        "mode": "absolute"
+      },
+      "behavior": {
+        "memberName": "node_2",
+        "onClick": ""
+      },
+      "props": {
+        "name": "node_2",
+        "memberName": "node_2",
+        "responsive": true,
+        "fontSize": 14,
+        "fontFamily": "Arial",
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0,
+        "onClick": "",
+        "text": "Radio",
+        "selected": false,
+        "groupName": "default",
+        "radioValue": "node_2",
+        "mode": "absolute"
+      },
+      "children": []
+    },
+    {
+      "id": "node_3",
+      "type": "radioButton",
+      "role": "control",
+      "frame": {
+        "x": 24.0,
+        "y": 144.0,
+        "width": 190.0,
+        "height": 40.0,
+        "responsive": true
+      },
+      "content": {
+        "name": "node_3",
+        "text": "Radio",
+        "groupName": "default",
+        "radioValue": "node_3",
+        "fontFamily": "Arial",
+        "fontSize": 14
+      },
+      "style": {
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0
+      },
+      "layout": {
+        "mode": "absolute"
+      },
+      "behavior": {
+        "memberName": "node_3",
+        "onClick": ""
+      },
+      "props": {
+        "name": "node_3",
+        "memberName": "node_3",
+        "responsive": true,
+        "fontSize": 14,
+        "fontFamily": "Arial",
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0,
+        "onClick": "",
+        "text": "Radio",
+        "selected": false,
+        "groupName": "default",
+        "radioValue": "node_3",
+        "mode": "absolute"
+      },
+      "children": []
+    },
+    {
+      "id": "node_4",
+      "type": "radioButton",
+      "role": "control",
+      "frame": {
+        "x": 24.0,
+        "y": 184.0,
+        "width": 190.0,
+        "height": 40.0,
+        "responsive": true
+      },
+      "content": {
+        "name": "node_4",
+        "text": "Radio",
+        "groupName": "default",
+        "radioValue": "node_4",
+        "fontFamily": "Arial",
+        "fontSize": 14
+      },
+      "style": {
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0
+      },
+      "layout": {
+        "mode": "absolute"
+      },
+      "behavior": {
+        "memberName": "node_4",
+        "onClick": ""
+      },
+      "props": {
+        "name": "node_4",
+        "memberName": "node_4",
+        "responsive": true,
+        "fontSize": 14,
+        "fontFamily": "Arial",
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0,
+        "onClick": "",
+        "text": "Radio",
+        "selected": false,
+        "groupName": "default",
+        "radioValue": "node_4",
+        "mode": "absolute"
+      },
+      "children": []
+    },
+    {
+      "id": "node_5",
+      "type": "comboBox",
+      "role": "control",
+      "frame": {
+        "x": 232.0,
+        "y": 32.0,
+        "width": 180.0,
+        "height": 44.0,
+        "responsive": true
+      },
+      "content": {
+        "name": "node_5",
+        "items": "One,Two,Three",
+        "fontFamily": "Arial",
+        "fontSize": 14
+      },
+      "style": {
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0
+      },
+      "layout": {
+        "mode": "absolute"
+      },
+      "behavior": {
+        "memberName": "node_5",
+        "onClick": ""
+      },
+      "props": {
+        "name": "node_5",
+        "memberName": "node_5",
+        "responsive": true,
+        "fontSize": 14,
+        "fontFamily": "Arial",
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0,
+        "onClick": "",
+        "items": "One,Two,Three",
+        "value": "One",
+        "mode": "absolute"
+      },
+      "children": []
+    },
+    {
+      "id": "node_6",
+      "type": "listBox",
+      "role": "control",
+      "frame": {
+        "x": 232.0,
+        "y": 96.0,
+        "width": 220.0,
+        "height": 130.0,
+        "responsive": true
+      },
+      "content": {
+        "name": "node_6",
+        "items": "Item 1,Item 2,Item 3",
+        "fontFamily": "Arial",
+        "fontSize": 14
+      },
+      "style": {
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0
+      },
+      "layout": {
+        "mode": "absolute"
+      },
+      "behavior": {
+        "memberName": "node_6",
+        "onClick": ""
+      },
+      "props": {
+        "name": "node_6",
+        "memberName": "node_6",
+        "responsive": true,
+        "fontSize": 14,
+        "fontFamily": "Arial",
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0,
+        "onClick": "",
+        "items": "Item 1,Item 2,Item 3",
+        "mode": "absolute"
+      },
+      "children": []
+    },
+    {
+      "id": "node_7",
+      "type": "progressBar",
+      "role": "control",
+      "frame": {
+        "x": 512.0,
+        "y": 48.0,
+        "width": 220.0,
+        "height": 32.0,
+        "responsive": true
+      },
+      "content": {
+        "name": "node_7",
+        "fontFamily": "Arial",
+        "fontSize": 14
+      },
+      "style": {
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0
+      },
+      "layout": {
+        "mode": "absolute"
+      },
+      "behavior": {
+        "memberName": "node_7",
+        "onClick": ""
+      },
+      "props": {
+        "name": "node_7",
+        "memberName": "node_7",
+        "responsive": true,
+        "fontSize": 14,
+        "fontFamily": "Arial",
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0,
+        "onClick": "",
+        "value": 40,
+        "max": 100,
+        "mode": "absolute"
+      },
+      "children": []
+    },
+    {
+      "id": "node_8",
+      "type": "table",
+      "role": "control",
+      "frame": {
+        "x": 24.0,
+        "y": 256.0,
+        "width": 312.0,
+        "height": 256.0,
+        "responsive": true
+      },
+      "content": {
+        "name": "node_8",
+        "columns": "Name,Value,Value2",
+        "rows": "A,1,10;B,2,20;C,3,30",
+        "fontFamily": "Arial",
+        "fontSize": 14
+      },
+      "style": {
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0
+      },
+      "layout": {
+        "mode": "absolute"
+      },
+      "behavior": {
+        "memberName": "node_8",
+        "onClick": ""
+      },
+      "props": {
+        "name": "node_8",
+        "memberName": "node_8",
+        "responsive": true,
+        "fontSize": 14,
+        "fontFamily": "Arial",
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0,
+        "onClick": "",
+        "columns": "Name,Value,Value2",
+        "rows": "A,1,10;B,2,20;C,3,30",
+        "mode": "absolute"
+      },
+      "children": []
+    },
+    {
+      "id": "node_9",
+      "type": "checkBox",
+      "role": "control",
+      "frame": {
+        "x": 760.0,
+        "y": 48.0,
+        "width": 180.0,
+        "height": 36.0,
+        "responsive": true
+      },
+      "content": {
+        "name": "node_9",
+        "text": "Check",
+        "fontFamily": "Arial",
+        "fontSize": 14
+      },
+      "style": {
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0
+      },
+      "layout": {
+        "mode": "absolute"
+      },
+      "behavior": {
+        "memberName": "node_9",
+        "onClick": ""
+      },
+      "props": {
+        "name": "node_9",
+        "memberName": "node_9",
+        "responsive": true,
+        "fontSize": 14,
+        "fontFamily": "Arial",
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0,
+        "onClick": "",
+        "text": "Check",
+        "checked": false,
+        "mode": "absolute"
+      },
+      "children": []
+    },
+    {
+      "id": "node_10",
+      "type": "label",
+      "role": "control",
+      "frame": {
+        "x": 496.0,
+        "y": 112.0,
+        "width": 180.0,
+        "height": 44.0,
+        "responsive": true
+      },
+      "content": {
+        "name": "testLabel",
+        "text": "MyLabel!!!!!!!",
+        "fontFamily": "Arial",
+        "fontSize": 22
+      },
+      "style": {
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF00",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0
+      },
+      "layout": {
+        "mode": "absolute"
+      },
+      "behavior": {
+        "memberName": "testLabel",
+        "onClick": ""
+      },
+      "props": {
+        "name": "testLabel",
+        "memberName": "testLabel",
+        "responsive": true,
+        "fontSize": 22,
+        "fontFamily": "Arial",
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF00",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0,
+        "onClick": "",
+        "text": "MyLabel!!!!!!!",
+        "mode": "absolute"
+      },
+      "children": []
+    },
+    {
+      "id": "node_11",
+      "type": "verticalSlider",
+      "role": "control",
+      "frame": {
+        "x": 848.0,
+        "y": 192.0,
+        "width": 72.0,
+        "height": 208.0,
+        "responsive": true
+      },
+      "content": {
+        "name": "node_11",
+        "fontFamily": "Arial",
+        "fontSize": 14
+      },
+      "style": {
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0
+      },
+      "layout": {
+        "mode": "absolute"
+      },
+      "behavior": {
+        "memberName": "node_11",
+        "onClick": ""
+      },
+      "props": {
+        "name": "node_11",
+        "memberName": "node_11",
+        "responsive": true,
+        "fontSize": 14,
+        "fontFamily": "Arial",
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0,
+        "onClick": "",
+        "value": 40,
+        "min": 0,
+        "max": 100,
+        "mode": "absolute"
+      },
+      "children": []
+    },
+    {
+      "id": "node_12",
+      "type": "horizontalSlider",
+      "role": "control",
+      "frame": {
+        "x": 704.0,
+        "y": 120.0,
+        "width": 232.0,
+        "height": 48.0,
+        "responsive": true
+      },
+      "content": {
+        "name": "node_12",
+        "fontFamily": "Arial",
+        "fontSize": 14
+      },
+      "style": {
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0
+      },
+      "layout": {
+        "mode": "absolute"
+      },
+      "behavior": {
+        "memberName": "node_12",
+        "onClick": ""
+      },
+      "props": {
+        "name": "node_12",
+        "memberName": "node_12",
+        "responsive": true,
+        "fontSize": 14,
+        "fontFamily": "Arial",
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0,
+        "onClick": "",
+        "value": 40,
+        "min": 0,
+        "max": 100,
+        "mode": "absolute"
+      },
+      "children": []
+    },
+    {
+      "id": "node_13",
+      "type": "row",
+      "role": "layout",
+      "frame": {
+        "x": 352.0,
+        "y": 296.0,
+        "width": 472.0,
+        "height": 328.0,
+        "responsive": true
+      },
+      "content": {
+        "name": "node_13",
+        "fontFamily": "Arial",
+        "fontSize": 14
+      },
+      "style": {
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0
+      },
+      "layout": {
+        "mode": "row",
+        "gap": 8,
+        "mainAxisAlignment": "start",
+        "crossAxisAlignment": "start"
+      },
+      "behavior": {
+        "memberName": "node_13",
+        "onClick": ""
+      },
+      "props": {
+        "name": "node_13",
+        "memberName": "node_13",
+        "responsive": true,
+        "fontSize": 14,
+        "fontFamily": "Arial",
+        "color": "#111827",
+        "backgroundColor": "#FFFFFF",
+        "foregroundColor": "#111827",
+        "borderColor": "#CBD5E1",
+        "borderRadius": 4.0,
+        "padding": 8.0,
+        "onClick": "",
+        "gap": 8,
+        "mainAxisAlignment": "start",
+        "crossAxisAlignment": "start",
+        "mode": "row"
+      },
+      "children": [
+        {
+          "id": "node_14",
+          "type": "column",
+          "role": "layout",
+          "frame": {
+            "x": 16.0,
+            "y": 32.0,
+            "width": 224.0,
+            "height": 264.0,
+            "responsive": true
+          },
+          "content": {
+            "name": "node_14",
+            "fontFamily": "Arial",
+            "fontSize": 14
+          },
+          "style": {
+            "color": "#111827",
+            "backgroundColor": "#FFFFFF",
+            "foregroundColor": "#111827",
+            "borderColor": "#CBD5E1",
+            "borderRadius": 4.0,
+            "padding": 8.0
+          },
+          "layout": {
+            "mode": "column",
+            "gap": 8,
+            "mainAxisAlignment": "start",
+            "crossAxisAlignment": "start"
+          },
+          "behavior": {
+            "memberName": "node_14",
+            "onClick": ""
+          },
+          "props": {
+            "name": "node_14",
+            "memberName": "node_14",
+            "responsive": true,
+            "fontSize": 14,
+            "fontFamily": "Arial",
+            "color": "#111827",
+            "backgroundColor": "#FFFFFF",
+            "foregroundColor": "#111827",
+            "borderColor": "#CBD5E1",
+            "borderRadius": 4.0,
+            "padding": 8.0,
+            "onClick": "",
+            "gap": 8,
+            "mainAxisAlignment": "start",
+            "crossAxisAlignment": "start",
+            "mode": "column"
+          },
+          "children": [
+            {
+              "id": "node_16",
+              "type": "radioButton",
+              "role": "control",
+              "frame": {
+                "x": 16.0,
+                "y": 32.0,
+                "width": 190.0,
+                "height": 40.0,
+                "responsive": true
+              },
+              "content": {
+                "name": "node_16",
+                "text": "Radio",
+                "groupName": "default2",
+                "radioValue": "node_16",
+                "fontFamily": "Arial",
+                "fontSize": 14
+              },
+              "style": {
+                "color": "#111827",
+                "backgroundColor": "#FFFFFF",
+                "foregroundColor": "#111827",
+                "borderColor": "#CBD5E1",
+                "borderRadius": 4.0,
+                "padding": 8.0
+              },
+              "layout": {
+                "mode": "absolute"
+              },
+              "behavior": {
+                "memberName": "node_16",
+                "onClick": ""
+              },
+              "props": {
+                "name": "node_16",
+                "memberName": "node_16",
+                "responsive": true,
+                "fontSize": 14,
+                "fontFamily": "Arial",
+                "color": "#111827",
+                "backgroundColor": "#FFFFFF",
+                "foregroundColor": "#111827",
+                "borderColor": "#CBD5E1",
+                "borderRadius": 4.0,
+                "padding": 8.0,
+                "onClick": "",
+                "text": "Radio",
+                "selected": false,
+                "groupName": "default2",
+                "radioValue": "node_16",
+                "mode": "absolute"
+              },
+              "children": []
+            },
+            {
+              "id": "node_17",
+              "type": "radioButton",
+              "role": "control",
+              "frame": {
+                "x": 16.0,
+                "y": 112.0,
+                "width": 190.0,
+                "height": 40.0,
+                "responsive": true
+              },
+              "content": {
+                "name": "node_17",
+                "text": "Radio",
+                "groupName": "default2",
+                "radioValue": "node_16_1",
+                "fontFamily": "Arial",
+                "fontSize": 14
+              },
+              "style": {
+                "color": "#111827",
+                "backgroundColor": "#FFFFFF",
+                "foregroundColor": "#111827",
+                "borderColor": "#CBD5E1",
+                "borderRadius": 4.0,
+                "padding": 8.0
+              },
+              "layout": {
+                "mode": "absolute"
+              },
+              "behavior": {
+                "memberName": "node_17",
+                "onClick": ""
+              },
+              "props": {
+                "name": "node_17",
+                "memberName": "node_17",
+                "responsive": true,
+                "fontSize": 14,
+                "fontFamily": "Arial",
+                "color": "#111827",
+                "backgroundColor": "#FFFFFF",
+                "foregroundColor": "#111827",
+                "borderColor": "#CBD5E1",
+                "borderRadius": 4.0,
+                "padding": 8.0,
+                "onClick": "",
+                "text": "Radio",
+                "selected": false,
+                "groupName": "default2",
+                "radioValue": "node_16_1",
+                "mode": "absolute"
+              },
+              "children": []
+            },
+            {
+              "id": "node_18",
+              "type": "radioButton",
+              "role": "control",
+              "frame": {
+                "x": 24.0,
+                "y": 200.0,
+                "width": 190.0,
+                "height": 40.0,
+                "responsive": true
+              },
+              "content": {
+                "name": "node_18",
+                "text": "Radio",
+                "groupName": "default2",
+                "radioValue": "node_16_1_1",
+                "fontFamily": "Arial",
+                "fontSize": 14
+              },
+              "style": {
+                "color": "#111827",
+                "backgroundColor": "#FFFFFF",
+                "foregroundColor": "#111827",
+                "borderColor": "#CBD5E1",
+                "borderRadius": 4.0,
+                "padding": 8.0
+              },
+              "layout": {
+                "mode": "absolute"
+              },
+              "behavior": {
+                "memberName": "node_18",
+                "onClick": ""
+              },
+              "props": {
+                "name": "node_18",
+                "memberName": "node_18",
+                "responsive": true,
+                "fontSize": 14,
+                "fontFamily": "Arial",
+                "color": "#111827",
+                "backgroundColor": "#FFFFFF",
+                "foregroundColor": "#111827",
+                "borderColor": "#CBD5E1",
+                "borderRadius": 4.0,
+                "padding": 8.0,
+                "onClick": "",
+                "text": "Radio",
+                "selected": false,
+                "groupName": "default2",
+                "radioValue": "node_16_1_1",
+                "mode": "absolute"
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "node_15",
+          "type": "column",
+          "role": "layout",
+          "frame": {
+            "x": 256.0,
+            "y": 32.0,
+            "width": 208.0,
+            "height": 272.0,
+            "responsive": true
+          },
+          "content": {
+            "name": "node_15",
+            "fontFamily": "Arial",
+            "fontSize": 14
+          },
+          "style": {
+            "color": "#111827",
+            "backgroundColor": "#FFFFFF",
+            "foregroundColor": "#111827",
+            "borderColor": "#CBD5E1",
+            "borderRadius": 4.0,
+            "padding": 8.0
+          },
+          "layout": {
+            "mode": "column",
+            "gap": 8,
+            "mainAxisAlignment": "start",
+            "crossAxisAlignment": "start"
+          },
+          "behavior": {
+            "memberName": "node_15",
+            "onClick": ""
+          },
+          "props": {
+            "name": "node_15",
+            "memberName": "node_15",
+            "responsive": true,
+            "fontSize": 14,
+            "fontFamily": "Arial",
+            "color": "#111827",
+            "backgroundColor": "#FFFFFF",
+            "foregroundColor": "#111827",
+            "borderColor": "#CBD5E1",
+            "borderRadius": 4.0,
+            "padding": 8.0,
+            "onClick": "",
+            "gap": 8,
+            "mainAxisAlignment": "start",
+            "crossAxisAlignment": "start",
+            "mode": "column"
+          },
+          "children": [
+            {
+              "id": "node_19",
+              "type": "lineEdit",
+              "role": "control",
+              "frame": {
+                "x": 16.0,
+                "y": 40.0,
+                "width": 184.0,
+                "height": 40.0,
+                "responsive": true
+              },
+              "content": {
+                "name": "node_19",
+                "text": "",
+                "placeholder": "Input",
+                "fontFamily": "Arial",
+                "fontSize": 14
+              },
+              "style": {
+                "color": "#111827",
+                "backgroundColor": "#FFFFFF",
+                "foregroundColor": "#111827",
+                "borderColor": "#CBD5E1",
+                "borderRadius": 4.0,
+                "padding": 8.0
+              },
+              "layout": {
+                "mode": "absolute"
+              },
+              "behavior": {
+                "memberName": "node_19",
+                "onClick": ""
+              },
+              "props": {
+                "name": "node_19",
+                "memberName": "node_19",
+                "responsive": true,
+                "fontSize": 14,
+                "fontFamily": "Arial",
+                "color": "#111827",
+                "backgroundColor": "#FFFFFF",
+                "foregroundColor": "#111827",
+                "borderColor": "#CBD5E1",
+                "borderRadius": 4.0,
+                "padding": 8.0,
+                "onClick": "",
+                "text": "",
+                "placeholder": "Input",
+                "mode": "absolute"
+              },
+              "children": []
+            },
+            {
+              "id": "node_20",
+              "type": "listBox",
+              "role": "control",
+              "frame": {
+                "x": 16.0,
+                "y": 128.0,
+                "width": 184.0,
+                "height": 128.0,
+                "responsive": true
+              },
+              "content": {
+                "name": "node_20",
+                "items": "Item 1,Item 2,Item 3",
+                "fontFamily": "Arial",
+                "fontSize": 14
+              },
+              "style": {
+                "color": "#111827",
+                "backgroundColor": "#FFFFFF",
+                "foregroundColor": "#111827",
+                "borderColor": "#CBD5E1",
+                "borderRadius": 4.0,
+                "padding": 8.0
+              },
+              "layout": {
+                "mode": "absolute"
+              },
+              "behavior": {
+                "memberName": "node_20",
+                "onClick": ""
+              },
+              "props": {
+                "name": "node_20",
+                "memberName": "node_20",
+                "responsive": true,
+                "fontSize": 14,
+                "fontFamily": "Arial",
+                "color": "#111827",
+                "backgroundColor": "#FFFFFF",
+                "foregroundColor": "#111827",
+                "borderColor": "#CBD5E1",
+                "borderRadius": 4.0,
+                "padding": 8.0,
+                "onClick": "",
+                "items": "Item 1,Item 2,Item 3",
+                "mode": "absolute"
+              },
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
