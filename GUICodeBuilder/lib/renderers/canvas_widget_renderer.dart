@@ -22,21 +22,27 @@ class CanvasWidgetRenderer {
           trailing: '[${node.props['groupName'] ?? 'default'}]',
         );
       case 'checkBox':
-        return _labeledBox(node,
-            Checkbox(value: node.props['checked'] == true, onChanged: (_) {}));
+        return _labeledBox(
+          node,
+          Checkbox(value: node.props['checked'] == true, onChanged: (_) {}),
+        );
       case 'spinBox':
       case 'doubleSpinBox':
       case 'lineEdit':
         return _inputLike(
-            node,
-            node.props['placeholder']?.toString() ??
-                node.props['value']?.toString() ??
-                '');
+          node,
+          node.props['placeholder']?.toString() ??
+              node.props['value']?.toString() ??
+              '',
+        );
       case 'comboBox':
         return _comboLike(node);
       case 'textBox':
-        return _inputLike(node, node.props['text']?.toString() ?? '',
-            multiline: true);
+        return _inputLike(
+          node,
+          node.props['text']?.toString() ?? '',
+          multiline: true,
+        );
       case 'listBox':
         return _listLike(node);
       case 'progressBar':
@@ -45,8 +51,9 @@ class CanvasWidgetRenderer {
         return Slider(value: _ratio(node), onChanged: (_) {});
       case 'verticalSlider':
         return RotatedBox(
-            quarterTurns: 3,
-            child: Slider(value: _ratio(node), onChanged: (_) {}));
+          quarterTurns: 3,
+          child: Slider(value: _ratio(node), onChanged: (_) {}),
+        );
       case 'table':
         return _tableLike(node);
       case 'image':
@@ -89,16 +96,24 @@ class CanvasWidgetRenderer {
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: _readColor(
-              node.props['backgroundColor'], const Color(0xFF2563EB)),
-          foregroundColor:
-              _readColor(node.props['foregroundColor'], Colors.white),
+            node.props['backgroundColor'],
+            const Color(0xFF2563EB),
+          ),
+          foregroundColor: _readColor(
+            node.props['foregroundColor'],
+            Colors.white,
+          ),
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(
-                  _readDouble(node.props['borderRadius'], 6))),
+            borderRadius: BorderRadius.circular(
+              _readDouble(node.props['borderRadius'], 6),
+            ),
+          ),
         ),
         onPressed: () {},
-        child: Text(node.props['text']?.toString() ?? 'Button',
-            overflow: TextOverflow.ellipsis),
+        child: Text(
+          node.props['text']?.toString() ?? 'Button',
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
   }
@@ -109,18 +124,24 @@ class CanvasWidgetRenderer {
         ? const SizedBox.expand()
         : Align(
             alignment: Alignment.topLeft,
-            child: Text(title,
-                style: const TextStyle(fontWeight: FontWeight.w700)));
+            child: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          );
     return Container(
       padding: EdgeInsets.all(_readDouble(node.props['padding'], 8)),
       decoration: BoxDecoration(
-        color:
-            _readColor(node.props['backgroundColor'], const Color(0xFFF8FAFC)),
+        color: _readColor(
+          node.props['backgroundColor'],
+          const Color(0xFFF8FAFC),
+        ),
         border: Border.all(
-            color:
-                _readColor(node.props['borderColor'], const Color(0xFF94A3B8))),
-        borderRadius:
-            BorderRadius.circular(_readDouble(node.props['borderRadius'], 6)),
+          color: _readColor(node.props['borderColor'], const Color(0xFF94A3B8)),
+        ),
+        borderRadius: BorderRadius.circular(
+          _readDouble(node.props['borderRadius'], 6),
+        ),
       ),
       child: child,
     );
@@ -144,17 +165,19 @@ class CanvasWidgetRenderer {
   }
 
   Widget _labeledBox(WidgetNode node, Widget control, {String? trailing}) {
-    return Row(children: [
-      control,
-      Expanded(
-        child: Text(
-          trailing == null
-              ? (node.props['text']?.toString() ?? node.displayName)
-              : '${node.props['text']?.toString() ?? node.displayName} $trailing',
-          overflow: TextOverflow.ellipsis,
+    return Row(
+      children: [
+        control,
+        Expanded(
+          child: Text(
+            trailing == null
+                ? (node.props['text']?.toString() ?? node.displayName)
+                : '${node.props['text']?.toString() ?? node.displayName} $trailing',
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
-      ),
-    ]);
+      ],
+    );
   }
 
   Widget _inputLike(WidgetNode node, String text, {bool multiline = false}) {
@@ -162,8 +185,9 @@ class CanvasWidgetRenderer {
       padding: const EdgeInsets.all(8),
       alignment: multiline ? Alignment.topLeft : Alignment.centerLeft,
       decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFCBD5E1)),
-          color: Colors.white),
+        border: Border.all(color: const Color(0xFFCBD5E1)),
+        color: Colors.white,
+      ),
       child: Text(text, overflow: TextOverflow.ellipsis),
     );
   }
@@ -178,8 +202,9 @@ class CanvasWidgetRenderer {
 
   Widget _tableLike(WidgetNode node) {
     return Container(
-      decoration:
-          BoxDecoration(border: Border.all(color: const Color(0xFFCBD5E1))),
+      decoration: BoxDecoration(
+        border: Border.all(color: const Color(0xFFCBD5E1)),
+      ),
       child: const Center(child: Text('Table')),
     );
   }

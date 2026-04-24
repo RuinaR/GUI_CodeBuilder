@@ -54,6 +54,9 @@ class JsonDocumentService {
 - GUI Code Builder Export Schema: 3
 - Flutter: 3.41.7 stable
 - Dart: 3.11.5
+- Flet: 0.82.2
+- PyQt6: 6.11.0
+- Qt: 6.11.0
 - 지원 Export 언어: Flutter(Dart), Flet(Python), PyQt6(Python), HTML/CSS
 
 ## 폴더 구조
@@ -109,14 +112,16 @@ exports\\tools\\install_export_python_deps.cmd
 
 ## 생성 클래스 수명주기
 
-- Flutter: `init()`은 컨트롤 멤버를 초기화하고, `release()`는 현재 route를 닫습니다.
-- Flet: `init()`은 멤버 변수를 초기화하고, `release(page)`는 현재 canvas를 페이지에서 제거합니다.
-- PyQt: `init()`은 UI 멤버를 초기화하고, `release()`는 현재 window를 닫습니다.
+생성 클래스는 `initialize`, `build`, `release`를 분리합니다. `build` 내부에서 `initialize`를 다시 호출하지 않으므로, 사용하는 쪽에서 필요한 순서대로 직접 호출해야 합니다.
 
-- HTML/CSS: initialize()는 DOM 멤버를 수집하고, uild()는 페이지 객체를 준비하며, 
-elease()는 root DOM을 제거합니다.
+- Flutter: 기본 생성자는 자동 초기화하지 않습니다. 테스트 main은 바로 확인할 수 있도록 `autoInitialize: true`로 실행합니다.
+- Flet: `initialize()`가 컨트롤 멤버를 생성하고, `build(page)`가 페이지에 canvas를 추가하며, `release(page)`가 canvas를 제거합니다.
+- PyQt: `initialize()`가 UI 멤버를 생성하고, `build()`가 window를 표시하며, `release()`가 window를 닫습니다.
+- HTML/CSS: `initialize()`가 DOM 멤버를 수집하고 이벤트를 연결하며, `build()`는 렌더링 진입점으로 분리되어 있고, `release()`가 root DOM을 제거합니다.
 
-버튼 클릭 시 다른 페이지로 이동하고 싶다면 생성 코드의 버튼 핸들러에서 `release`를 호출한 뒤 새 페이지를 띄우면 됩니다.
+이벤트가 필요한 컨트롤은 멤버 변수명 기반의 빈 핸들러를 생성해 자동 연결합니다. 예: `btnStart_on_click`, `btnStartControlOnPressed`, `btnStart_on_clicked`, `btnStart_onClick`.
+
+버튼 클릭 시 다른 페이지로 이동하고 싶다면 생성 코드의 이벤트 핸들러에서 `release`를 호출한 뒤 새 페이지를 띄우면 됩니다.
 
 ## 주의
 

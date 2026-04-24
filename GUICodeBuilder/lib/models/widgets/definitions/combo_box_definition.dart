@@ -15,16 +15,18 @@ class ComboBoxDefinition extends WidgetDefinition {
   double get defaultHeight => 44;
   @override
   List<WidgetPropertyDefinition> get properties => const [
-        WidgetPropertyDefinition(
-            key: 'items',
-            label: 'items (comma separated)',
-            kind: WidgetPropertyKind.multilineText,
-            fallback: 'One,Two,Three'),
-        WidgetPropertyDefinition(
-            key: 'value',
-            label: 'selected value',
-            kind: WidgetPropertyKind.text),
-      ];
+    WidgetPropertyDefinition(
+      key: 'items',
+      label: 'items (comma separated)',
+      kind: WidgetPropertyKind.multilineText,
+      fallback: 'One,Two,Three',
+    ),
+    WidgetPropertyDefinition(
+      key: 'value',
+      label: 'selected value',
+      kind: WidgetPropertyKind.text,
+    ),
+  ];
   @override
   Map<String, dynamic> defaultProps(String id) =>
       baseProps(id)..addAll({'items': 'One,Two,Three', 'value': 'One'});

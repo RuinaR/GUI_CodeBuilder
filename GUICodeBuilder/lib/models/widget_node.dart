@@ -12,8 +12,8 @@ class WidgetNode {
     required this.height,
     Map<String, dynamic>? props,
     List<WidgetNode>? children,
-  })  : props = props ?? <String, dynamic>{},
-        children = children ?? <WidgetNode>[];
+  }) : props = props ?? <String, dynamic>{},
+       children = children ?? <WidgetNode>[];
 
   final String id;
   String type;
@@ -193,7 +193,8 @@ class WidgetNode {
   Map<String, dynamic> _behaviorProps() {
     return {
       'memberName': _safeMemberName(
-          props['memberName']?.toString() ?? props['name']?.toString() ?? id),
+        props['memberName']?.toString() ?? props['name']?.toString() ?? id,
+      ),
       'onClick': props['onClick']?.toString() ?? '',
     };
   }

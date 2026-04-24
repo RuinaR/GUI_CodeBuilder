@@ -58,8 +58,8 @@ class _EditorScreenState extends State<EditorScreen> {
                 axis: Axis.vertical,
                 onDrag: (delta) {
                   setState(() {
-                    _exportPreviewHeight =
-                        (_exportPreviewHeight - delta.dy).clamp(120, 420);
+                    _exportPreviewHeight = (_exportPreviewHeight - delta.dy)
+                        .clamp(120, 420);
                   });
                 },
               ),
@@ -105,8 +105,10 @@ class _EditorScreenState extends State<EditorScreen> {
               axis: Axis.horizontal,
               onDrag: (delta) {
                 setState(() {
-                  _rightPaneWidth =
-                      (_rightPaneWidth - delta.dx).clamp(280, 560);
+                  _rightPaneWidth = (_rightPaneWidth - delta.dx).clamp(
+                    280,
+                    560,
+                  );
                 });
               },
             ),
@@ -124,8 +126,10 @@ class _EditorScreenState extends State<EditorScreen> {
   Widget _buildLeftPane() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        _treePaneHeight =
-            _treePaneHeight.clamp(180, constraints.maxHeight - 180);
+        _treePaneHeight = _treePaneHeight.clamp(
+          180,
+          constraints.maxHeight - 180,
+        );
         return Column(
           children: [
             Expanded(child: WidgetPalette(onAddNode: _addNode)),
@@ -245,10 +249,7 @@ class _EditorScreenState extends State<EditorScreen> {
                   child: SegmentedButton<ExportFormat>(
                     segments: [
                       for (final format in ExportFormat.values)
-                        ButtonSegment(
-                          value: format,
-                          label: Text(format.label),
-                        ),
+                        ButtonSegment(value: format, label: Text(format.label)),
                     ],
                     selected: {_previewFormat},
                     onSelectionChanged: (values) {
@@ -303,7 +304,8 @@ class _EditorScreenState extends State<EditorScreen> {
       _deleteSelected();
       return;
     }
-    final isUndo = event.logicalKey == LogicalKeyboardKey.keyZ &&
+    final isUndo =
+        event.logicalKey == LogicalKeyboardKey.keyZ &&
         (HardwareKeyboard.instance.isControlPressed ||
             HardwareKeyboard.instance.isMetaPressed);
     if (isUndo) {

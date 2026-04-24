@@ -40,20 +40,17 @@ class ${className}PyQtWindow(QtWidgets.QWidget):
         self.resize($width, $height)
 ${_exportMembers(nodes)}
         self.radio_groups = {}
-        self.initialize()
-        self.build()
 
     def initialize(self):
-        pass
+${nodes.map((node) => _exportMemberAssignment(node, 8, parent: 'self')).join('\n')}
 
     def build(self):
-${nodes.map((node) => _exportMemberAssignment(node, 8, parent: 'self')).join('\n')}
+        self.show()
 
     def release(self):
         self.close()
 
-    def on_button_clicked(self, control_id):
-        QtWidgets.QMessageBox.information(self, "Button clicked", f"Clicked: {control_id}")
+${_exportEventHandlers(nodes)}
 ''';
   }
 
@@ -76,7 +73,8 @@ from pyqt_generated_page import ${className}PyQtWindow
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     window = ${className}PyQtWindow()
-    window.show()
+    window.initialize()
+    window.build()
     sys.exit(app.exec())
 ''';
   }
@@ -129,26 +127,26 @@ pause
       'text' =>
         'self.$name = QtWidgets.QLabel(${_quote(node.props['text']?.toString() ?? '')}, $parent)',
       'button' =>
-        'self.$name = QtWidgets.QPushButton(${_quote(node.props['text']?.toString() ?? 'Button')}, $parent)\n        self.$name.clicked.connect(lambda checked=False: self.on_button_clicked(${_quote(node.id)}))',
+        'self.$name = QtWidgets.QPushButton(${_quote(node.props['text']?.toString() ?? 'Button')}, $parent)\n        self.$name.clicked.connect(self.${_eventHandlerName(node, 'on_clicked')})',
       'radioButton' => _createRadioControl(node, parent),
       'checkBox' =>
-        'self.$name = QtWidgets.QCheckBox(${_quote(node.props['text']?.toString() ?? 'Check')}, $parent)',
+        'self.$name = QtWidgets.QCheckBox(${_quote(node.props['text']?.toString() ?? 'Check')}, $parent)\n        self.$name.stateChanged.connect(self.${_eventHandlerName(node, 'on_state_changed')})',
       'spinBox' => 'self.$name = QtWidgets.QSpinBox($parent)',
       'doubleSpinBox' => 'self.$name = QtWidgets.QDoubleSpinBox($parent)',
       'comboBox' =>
-        'self.$name = QtWidgets.QComboBox($parent)\n        self.$name.addItems([${_items(node).map(_quote).join(', ')}])',
+        'self.$name = QtWidgets.QComboBox($parent)\n        self.$name.addItems([${_items(node).map(_quote).join(', ')}])\n        self.$name.currentTextChanged.connect(self.${_eventHandlerName(node, 'on_current_text_changed')})',
       'textBox' =>
         'self.$name = QtWidgets.QTextEdit(${_quote(node.props['text']?.toString() ?? '')}, $parent)',
       'lineEdit' =>
-        'self.$name = QtWidgets.QLineEdit($parent)\n        self.$name.setPlaceholderText(${_quote(node.props['placeholder']?.toString() ?? '')})',
+        'self.$name = QtWidgets.QLineEdit($parent)\n        self.$name.setPlaceholderText(${_quote(node.props['placeholder']?.toString() ?? '')})\n        self.$name.textChanged.connect(self.${_eventHandlerName(node, 'on_text_changed')})',
       'listBox' =>
         'self.$name = QtWidgets.QListWidget($parent)\n        self.$name.addItems([${_items(node).map(_quote).join(', ')}])',
       'progressBar' =>
         'self.$name = QtWidgets.QProgressBar($parent)\n        self.$name.setValue(${_formatNumber(node.props['value'] ?? 0)})',
       'horizontalSlider' =>
-        'self.$name = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal, $parent)',
+        'self.$name = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal, $parent)\n        self.$name.valueChanged.connect(self.${_eventHandlerName(node, 'on_value_changed')})',
       'verticalSlider' =>
-        'self.$name = QtWidgets.QSlider(QtCore.Qt.Orientation.Vertical, $parent)',
+        'self.$name = QtWidgets.QSlider(QtCore.Qt.Orientation.Vertical, $parent)\n        self.$name.valueChanged.connect(self.${_eventHandlerName(node, 'on_value_changed')})',
       'table' => 'self.$name = QtWidgets.QTableWidget($parent)',
       'image' =>
         'self.$name = QtWidgets.QLabel(${_quote(node.props['text']?.toString() ?? 'Image')}, $parent)',
@@ -170,7 +168,7 @@ pause
     final selectedLine = node.props['selected'] == true
         ? '\n        self.$name.setChecked(True)'
         : '';
-    return 'self.$name = QtWidgets.QRadioButton(${_quote(node.props['text']?.toString() ?? 'Radio')}, $parent)\n        if ${_quote(groupName)} not in self.radio_groups:\n            self.radio_groups[${_quote(groupName)}] = QtWidgets.QButtonGroup(self)\n            self.radio_groups[${_quote(groupName)}].setExclusive(True)\n        self.radio_groups[${_quote(groupName)}].addButton(self.$name)$selectedLine';
+    return 'self.$name = QtWidgets.QRadioButton(${_quote(node.props['text']?.toString() ?? 'Radio')}, $parent)\n        if ${_quote(groupName)} not in self.radio_groups:\n            self.radio_groups[${_quote(groupName)}] = QtWidgets.QButtonGroup(self)\n            self.radio_groups[${_quote(groupName)}].setExclusive(True)\n        self.radio_groups[${_quote(groupName)}].addButton(self.$name)$selectedLine\n        self.$name.toggled.connect(self.${_eventHandlerName(node, 'on_toggled')})';
   }
 
   String _applyStyle(WidgetNode node) {
@@ -193,6 +191,74 @@ pause
           .split(',')
           .where((item) => item.trim().isNotEmpty)
           .toList();
+
+  String _exportEventHandlers(List<WidgetNode> nodes) {
+    final lines = <String>[];
+    void collect(WidgetNode node) {
+      switch (node.type) {
+        case 'button':
+          lines.add(
+            '''    def ${_eventHandlerName(node, 'on_clicked')}(self, checked=False):
+        # 여기에 ${_memberName(node)}의 클릭 이벤트를 구현합니다.
+        pass
+''',
+          );
+          break;
+        case 'radioButton':
+          lines.add(
+            '''    def ${_eventHandlerName(node, 'on_toggled')}(self, checked):
+        # 여기에 ${_memberName(node)}의 선택 변경 이벤트를 구현합니다.
+        pass
+''',
+          );
+          break;
+        case 'checkBox':
+          lines.add(
+            '''    def ${_eventHandlerName(node, 'on_state_changed')}(self, state):
+        # 여기에 ${_memberName(node)}의 체크 변경 이벤트를 구현합니다.
+        pass
+''',
+          );
+          break;
+        case 'comboBox':
+          lines.add(
+            '''    def ${_eventHandlerName(node, 'on_current_text_changed')}(self, text):
+        # 여기에 ${_memberName(node)}의 선택값 변경 이벤트를 구현합니다.
+        pass
+''',
+          );
+          break;
+        case 'lineEdit':
+          lines.add(
+            '''    def ${_eventHandlerName(node, 'on_text_changed')}(self, text):
+        # 여기에 ${_memberName(node)}의 텍스트 변경 이벤트를 구현합니다.
+        pass
+''',
+          );
+          break;
+        case 'horizontalSlider':
+        case 'verticalSlider':
+          lines.add(
+            '''    def ${_eventHandlerName(node, 'on_value_changed')}(self, value):
+        # 여기에 ${_memberName(node)}의 값 변경 이벤트를 구현합니다.
+        pass
+''',
+          );
+          break;
+        default:
+          break;
+      }
+      for (final child in node.children) {
+        collect(child);
+      }
+    }
+
+    for (final node in nodes) {
+      collect(node);
+    }
+    return lines.join('\n');
+  }
+
   String _safeClassName(String name) {
     final compact = name.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '');
     if (compact.isEmpty) {
@@ -227,4 +293,7 @@ pause
     final safe = compact.isEmpty ? node.id : compact;
     return RegExp(r'^[0-9]').hasMatch(safe) ? 'control_$safe' : safe;
   }
+
+  String _eventHandlerName(WidgetNode node, String suffix) =>
+      '${_memberName(node)}_$suffix';
 }

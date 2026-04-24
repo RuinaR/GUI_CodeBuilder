@@ -39,8 +39,9 @@ class EditorState {
     _pushUndo();
     final node = _createDefaultNode(type);
     final resolvedParentId = parentId ?? treeInsertParentId;
-    final parentNode =
-        resolvedParentId == null ? null : findNodeById(resolvedParentId);
+    final parentNode = resolvedParentId == null
+        ? null
+        : findNodeById(resolvedParentId);
 
     if (parentNode != null && parentNode.canHaveChildren) {
       final childIndex = parentNode.children.length;
@@ -236,14 +237,16 @@ class EditorState {
           node.y = _snap(bottom - node.height);
         }
       case 'hCenter':
-        final center =
-            items.map((node) => node.x + node.width / 2).reduce(_min);
+        final center = items
+            .map((node) => node.x + node.width / 2)
+            .reduce(_min);
         for (final node in items) {
           node.x = _snap(center - node.width / 2);
         }
       case 'vCenter':
-        final center =
-            items.map((node) => node.y + node.height / 2).reduce(_min);
+        final center = items
+            .map((node) => node.y + node.height / 2)
+            .reduce(_min);
         for (final node in items) {
           node.y = _snap(center - node.height / 2);
         }
@@ -330,9 +333,9 @@ class EditorState {
       ..clear()
       ..addAll(
         (json['nodes'] as List? ?? <dynamic>[]).whereType<Map>().map(
-              (nodeJson) =>
-                  WidgetNode.fromJson(Map<String, dynamic>.from(nodeJson)),
-            ),
+          (nodeJson) =>
+              WidgetNode.fromJson(Map<String, dynamic>.from(nodeJson)),
+        ),
       );
     selectedIds.clear();
     _nextId = _collectMaxId(nodes) + 1;
@@ -358,9 +361,9 @@ class EditorState {
       ..clear()
       ..addAll(
         (snapshot['nodes'] as List? ?? <dynamic>[]).whereType<Map>().map(
-              (nodeJson) =>
-                  WidgetNode.fromJson(Map<String, dynamic>.from(nodeJson)),
-            ),
+          (nodeJson) =>
+              WidgetNode.fromJson(Map<String, dynamic>.from(nodeJson)),
+        ),
       );
     selectedIds.clear();
     treeInsertParentId = null;

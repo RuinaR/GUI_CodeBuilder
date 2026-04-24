@@ -15,11 +15,17 @@ class ImageWidgetDefinition extends WidgetDefinition {
   double get defaultHeight => 120;
   @override
   List<WidgetPropertyDefinition> get properties => const [
-        WidgetPropertyDefinition(
-            key: 'src', label: 'image path/url', kind: WidgetPropertyKind.text),
-        WidgetPropertyDefinition(
-            key: 'text', label: 'fallback text', kind: WidgetPropertyKind.text),
-      ];
+    WidgetPropertyDefinition(
+      key: 'src',
+      label: 'image path/url',
+      kind: WidgetPropertyKind.text,
+    ),
+    WidgetPropertyDefinition(
+      key: 'text',
+      label: 'fallback text',
+      kind: WidgetPropertyKind.text,
+    ),
+  ];
   @override
   Map<String, dynamic> defaultProps(String id) =>
       baseProps(id)..addAll({'src': '', 'text': 'Image'});

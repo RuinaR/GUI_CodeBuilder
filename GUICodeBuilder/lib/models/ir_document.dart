@@ -26,9 +26,9 @@ class IrDocument {
       width: _readDouble(page['width'], 960),
       height: _readDouble(page['height'], 640),
       responsive: _readBool(page['responsive'], true),
-      nodes: (json['nodes'] as List? ?? <dynamic>[])
-          .whereType<Map>()
-          .map((nodeJson) {
+      nodes: (json['nodes'] as List? ?? <dynamic>[]).whereType<Map>().map((
+        nodeJson,
+      ) {
         return WidgetNode.fromJson(Map<String, dynamic>.from(nodeJson));
       }).toList(),
     );

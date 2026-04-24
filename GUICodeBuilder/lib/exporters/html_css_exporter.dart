@@ -41,11 +41,14 @@ $nodes
       constructor(root) { this.root = root; this.controls = {}; }
       initialize() {
         this.root.querySelectorAll('[data-member]').forEach((el) => this.controls[el.dataset.member] = el);
+${_eventBindings(document.nodes, 8)}
       }
-      build() { this.initialize(); }
+      build() {}
       release() { this.root.remove(); }
+${_eventHandlers(document.nodes, 6)}
     }
     const generatedPage = new ${_safeClassName(document.className)}HtmlPage(document.getElementById('page'));
+    generatedPage.initialize();
     generatedPage.build();
   </script>
 </body>
@@ -147,8 +150,10 @@ $space</label>''';
       case 'comboBox':
         final current = node.props['value']?.toString();
         final options = _items(node)
-            .map((item) =>
-                '$childSpace<option${item == current ? ' selected' : ''}>${_escape(item)}</option>')
+            .map(
+              (item) =>
+                  '$childSpace<option${item == current ? ' selected' : ''}>${_escape(item)}</option>',
+            )
             .join('\n');
         return '''$space<select>
 $options
@@ -181,6 +186,95 @@ $space</select>''';
     }
   }
 
+  String _eventBindings(List<WidgetNode> nodes, int indent) {
+    final lines = <String>[];
+    void collect(WidgetNode node) {
+      final member = _memberName(node);
+      final handler = _eventHandlerName(node, 'onChange');
+      switch (node.type) {
+        case 'button':
+          lines.add(
+            "${' ' * indent}this.controls['$member']?.querySelector('button')?.addEventListener('click', this.${_eventHandlerName(node, 'onClick')}.bind(this));",
+          );
+          break;
+        case 'radioButton':
+          lines.add(
+            "${' ' * indent}this.controls['$member']?.querySelector('input[type=\"radio\"]')?.addEventListener('change', this.$handler.bind(this));",
+          );
+          break;
+        case 'checkBox':
+          lines.add(
+            "${' ' * indent}this.controls['$member']?.querySelector('input[type=\"checkbox\"]')?.addEventListener('change', this.$handler.bind(this));",
+          );
+          break;
+        case 'comboBox':
+          lines.add(
+            "${' ' * indent}this.controls['$member']?.querySelector('select')?.addEventListener('change', this.$handler.bind(this));",
+          );
+          break;
+        case 'textBox':
+          lines.add(
+            "${' ' * indent}this.controls['$member']?.querySelector('textarea')?.addEventListener('input', this.$handler.bind(this));",
+          );
+          break;
+        case 'lineEdit':
+          lines.add(
+            "${' ' * indent}this.controls['$member']?.querySelector('input[type=\"text\"]')?.addEventListener('input', this.$handler.bind(this));",
+          );
+          break;
+        case 'horizontalSlider':
+        case 'verticalSlider':
+          lines.add(
+            "${' ' * indent}this.controls['$member']?.querySelector('input[type=\"range\"]')?.addEventListener('input', this.$handler.bind(this));",
+          );
+          break;
+        default:
+          break;
+      }
+      for (final child in node.children) {
+        collect(child);
+      }
+    }
+
+    for (final node in nodes) {
+      collect(node);
+    }
+    return lines.join('\n');
+  }
+
+  String _eventHandlers(List<WidgetNode> nodes, int indent) {
+    final lines = <String>[];
+    void collect(WidgetNode node) {
+      final space = ' ' * indent;
+      switch (node.type) {
+        case 'button':
+          lines.add(
+              "$space${_eventHandlerName(node, 'onClick')}(event) {\n$space  // 여기에 ${_memberName(node)}의 클릭 이벤트를 구현합니다.\n$space}");
+          break;
+        case 'radioButton':
+        case 'checkBox':
+        case 'comboBox':
+        case 'textBox':
+        case 'lineEdit':
+        case 'horizontalSlider':
+        case 'verticalSlider':
+          lines.add(
+              "$space${_eventHandlerName(node, 'onChange')}(event) {\n$space  // 여기에 ${_memberName(node)}의 변경 이벤트를 구현합니다.\n$space}");
+          break;
+        default:
+          break;
+      }
+      for (final child in node.children) {
+        collect(child);
+      }
+    }
+
+    for (final node in nodes) {
+      collect(node);
+    }
+    return lines.isEmpty ? '' : '${lines.join('\n')}\n';
+  }
+
   String _radioGroupName(WidgetNode node) =>
       node.props['groupName']?.toString().isNotEmpty == true
           ? node.props['groupName'].toString()
@@ -205,9 +299,16 @@ $space</select>''';
           .where((item) => item.isNotEmpty)
           .toList();
 
-  String _memberName(WidgetNode node) =>
-      (node.props['memberName']?.toString() ?? node.id)
-          .replaceAll(RegExp(r'[^A-Za-z0-9_]'), '_');
+  String _memberName(WidgetNode node) {
+    final raw = node.props['memberName']?.toString() ??
+        node.props['name']?.toString() ??
+        node.id;
+    final compact = raw.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '_');
+    return compact.isEmpty ? node.id : compact;
+  }
+
+  String _eventHandlerName(WidgetNode node, String suffix) =>
+      '${_memberName(node)}_$suffix';
 
   String _safeClassName(String name) =>
       name.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '').isEmpty

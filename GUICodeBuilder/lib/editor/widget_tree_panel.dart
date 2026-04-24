@@ -184,8 +184,8 @@ class _TreeTileBody extends StatelessWidget {
               color: insertTarget
                   ? const Color(0xFF16A34A)
                   : selected
-                      ? const Color(0xFF2563EB)
-                      : const Color(0xFFE5E7EB),
+                  ? const Color(0xFF2563EB)
+                  : const Color(0xFFE5E7EB),
               width: insertTarget ? 2 : 1,
             ),
           ),
@@ -249,8 +249,8 @@ class _RootDropTile extends StatelessWidget {
                 color: candidates.isNotEmpty
                     ? const Color(0xFFEFF6FF)
                     : active
-                        ? const Color(0xFFF0FDF4)
-                        : Colors.transparent,
+                    ? const Color(0xFFF0FDF4)
+                    : Colors.transparent,
                 border: Border.all(
                   color: active || candidates.isNotEmpty
                       ? const Color(0xFF16A34A)

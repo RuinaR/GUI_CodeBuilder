@@ -35,15 +35,13 @@ class ${className}FletPage:
 ${_exportMembers(nodes)}
 
     def initialize(self):
-        pass
+${nodes.map((node) => _exportMemberAssignment(node, 8)).join('\n')}
 
     def build(self, page: ft.Page):
-        self.initialize()
         page.title = "Generated Page"
         page.window_width = $width
         page.window_height = $height
         page.padding = 0
-${nodes.map((node) => _exportMemberAssignment(node, 8)).join('\n')}
         self.canvas = ft.Stack(
             width=$width,
             height=$height,
@@ -58,15 +56,13 @@ ${nodes.map((node) => _exportPositionedNode(node, 16)).join('\n')}
             page.controls.remove(self.canvas)
             page.update()
 
-    def on_button_click(self, control_id):
-        pass
-
-    def on_radio_change(self, group_name, value):
-        self.radio_group_values[group_name] = value
+${_exportEventHandlers(nodes)}
 
 
 def main(page: ft.Page):
-    ${className}FletPage().build(page)
+    generated_page = ${className}FletPage()
+    generated_page.initialize()
+    generated_page.build(page)
 ''';
   }
 
@@ -100,7 +96,7 @@ pause
   String _exportMembers(List<WidgetNode> nodes) {
     final lines = <String>[
       '        self.canvas = None',
-      '        self.radio_group_values = {}'
+      '        self.radio_group_values = {}',
     ];
     void collect(WidgetNode node) {
       lines.add('        self.${_memberName(node)} = None');
@@ -131,6 +127,9 @@ $space),''';
     final lines = <String>[];
     for (final child in node.children) {
       lines.add(_exportMemberAssignment(child, indent));
+    }
+    if (node.type == 'radioButton') {
+      lines.add(_exportRadioDefault(node, indent));
     }
     lines.add(
       '$space'
@@ -174,12 +173,27 @@ $space),''';
     }
   }
 
+  String _exportRadioDefault(WidgetNode node, int indent) {
+    final space = ' ' * indent;
+    final groupName = _quote(_radioGroupName(node));
+    final value = _quote(_radioValue(node));
+    return node.props['selected'] == true
+        ? '$space self.radio_group_values.setdefault($groupName, $value)'
+        : '$space self.radio_group_values.setdefault($groupName, None)';
+  }
+
   String _exportRadio(WidgetNode node, int indent) {
     final space = ' ' * indent;
-    return '''ft.Radio(
-$space    label=${_quote(node.props['text']?.toString() ?? 'Radio')},
-$space    value=${_quote(_radioValue(node))},
-$space    data=${_quote(_radioGroupName(node))},
+    final groupName = _quote(_radioGroupName(node));
+    final value = _quote(_radioValue(node));
+    return '''ft.RadioGroup(
+$space    value=self.radio_group_values.get($groupName),
+$space    data=$groupName,
+$space    on_change=self.${_eventHandlerName(node, 'on_change')},
+$space    content=ft.Radio(
+$space        label=${_quote(node.props['text']?.toString() ?? 'Radio')},
+$space        value=$value,
+$space    ),
 $space)''';
   }
 
@@ -199,7 +213,7 @@ $space)''';
 $space    content=${_quote(node.props['text']?.toString() ?? 'Button')},
 $space    bgcolor=${_quote(node.props['backgroundColor']?.toString() ?? '#2563EB')},
 $space    color=${_quote(node.props['foregroundColor']?.toString() ?? '#FFFFFF')},
-$space    on_click=lambda e: self.on_button_click(${_quote(node.id)}),
+$space    on_click=self.${_eventHandlerName(node, 'on_click')},
 $space)''';
   }
 
@@ -227,8 +241,9 @@ $space)''';
   String _exportFlex(WidgetNode node, int indent, String controlName) {
     final space = ' ' * indent;
     final controls = node.children
-        .map((child) =>
-            '${' ' * (indent + 8)}${_exportSized(child, indent + 8)},')
+        .map(
+          (child) => '${' ' * (indent + 8)}${_exportSized(child, indent + 8)},',
+        )
         .join('\n');
     return '''ft.Container(
 $space    bgcolor=${_quote(node.props['backgroundColor']?.toString() ?? '#FFFFFF')},
@@ -250,6 +265,36 @@ $space    width=${_formatNumber(node.width)},
 $space    height=${_formatNumber(node.height)},
 $space    content=self.${_memberName(node)},
 $space)''';
+  }
+
+  String _exportEventHandlers(List<WidgetNode> nodes) {
+    final lines = <String>[];
+    void collect(WidgetNode node) {
+      switch (node.type) {
+        case 'button':
+          lines.add('''    def ${_eventHandlerName(node, 'on_click')}(self, e):
+        # 여기에 ${_memberName(node)}의 클릭 이벤트를 구현합니다.
+        pass
+''');
+          break;
+        case 'radioButton':
+          lines.add('''    def ${_eventHandlerName(node, 'on_change')}(self, e):
+        # 여기에 ${_memberName(node)}의 변경 이벤트를 구현합니다.
+        self.radio_group_values[e.control.data] = e.control.value
+''');
+          break;
+        default:
+          break;
+      }
+      for (final child in node.children) {
+        collect(child);
+      }
+    }
+
+    for (final node in nodes) {
+      collect(node);
+    }
+    return lines.join('\n');
   }
 
   String _radioGroupName(WidgetNode node) =>
@@ -291,4 +336,7 @@ $space)''';
     final safe = compact.isEmpty ? node.id : compact;
     return RegExp(r'^[0-9]').hasMatch(safe) ? 'control_$safe' : safe;
   }
+
+  String _eventHandlerName(WidgetNode node, String suffix) =>
+      '${_memberName(node)}_$suffix';
 }

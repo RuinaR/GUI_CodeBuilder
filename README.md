@@ -24,6 +24,16 @@ tools\build_and_run_release.cmd
 GUICodeBuilder\build\windows\x64\runner\Release\gui_code_builder.exe
 ```
 
+## 확인한 로컬 버전
+
+- Flutter 3.41.7 stable
+- Dart 3.11.5
+- Flet 0.82.2
+- PyQt6 6.11.0
+- Qt 6.11.0
+
+이 프로젝트의 exporter는 위 버전 기준 API에 맞춰져 있습니다. 특히 Flutter Radio는 RadioGroup<String>, Flet Radio는 t.RadioGroup(content=ft.Radio(...)) 구조를 사용합니다.
+
 ## Export 구조
 
 Export 버튼을 누르면 `GUICodeBuilder/exports/` 폴더가 만들어집니다. 모든 코드는 `page_ir.json` IR에서 생성됩니다.
@@ -42,6 +52,8 @@ exports\test_mains\run_html_test.cmd
 ```
 
 HTML은 같은 폴더의 `html_generated_page.css`를 상대 경로로 참조합니다.
+
+생성 클래스는 `initialize`, `build`, `release` 생명주기를 분리합니다. `build` 안에서는 `initialize`를 호출하지 않으며, 테스트 main은 실행 확인을 위해 `initialize -> build` 순서로 호출합니다. 이벤트가 필요한 컨트롤은 멤버 변수명 기반의 빈 핸들러가 생성되어 바로 수정할 수 있습니다.
 
 ## 구조
 
@@ -71,3 +83,4 @@ exports/
 Button, Radio button, Check box, Spin box, Double spin box, Label, Combo box, Text box, Line edit, List box, Progress bar, Horizontal/Vertical slider, Table, Image, Group box, Tab, Scroll area, Container, Row, Column을 지원합니다.
 
 Radio button은 `radio group name`이 같은 항목끼리 한 그룹으로 묶입니다. Flutter export는 정식 `RadioGroup<String>`을 사용합니다.
+

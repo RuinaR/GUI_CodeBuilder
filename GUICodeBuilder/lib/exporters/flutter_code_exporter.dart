@@ -30,7 +30,9 @@ import 'package:flutter/material.dart';
 
 // GUI Code Builder에서 생성된 Flutter 페이지이다.
 class $className extends StatefulWidget {
-  const $className({super.key});
+  const $className({super.key, this.autoInitialize = false});
+
+  final bool autoInitialize;
 
   @override
   State<$className> createState() => _${className}State();
@@ -40,8 +42,15 @@ class _${className}State extends State<$className> {
 ${_exportMembers(nodes)}
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.autoInitialize) {
+      initialize();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    initialize();
     return Scaffold(
       body: SafeArea(
         child: LayoutBuilder(
@@ -79,7 +88,7 @@ ${nodes.map((node) => _exportMemberAssignment(node, 4)).join('\n')}
     Navigator.of(context).maybePop();
   }
 
-  void onButtonPressed(String controlId) {}
+${_exportEventHandlers(nodes)}
 }
 ''';
   }
@@ -94,7 +103,7 @@ import '../${format.fileName}';
 
 // 생성된 Flutter 페이지를 바로 실행하는 테스트 main이다.
 void main() {
-  runApp(const MaterialApp(debugShowCheckedModeBanner: false, home: $className()));
+  runApp(const MaterialApp(debugShowCheckedModeBanner: false, home: $className(autoInitialize: true)));
 }
 ''';
   }
@@ -138,10 +147,10 @@ $space),''';
 
   String _exportMembers(List<WidgetNode> nodes) {
     final lines = <String>[
-      '  final Map<String, String?> radioGroupValues = <String, String?>{};'
+      '  final Map<String, String?> radioGroupValues = <String, String?>{};',
     ];
     void collect(WidgetNode node) {
-      lines.add('  late Widget ${_memberName(node)};');
+      lines.add('  Widget ${_memberName(node)} = const SizedBox.shrink();');
       for (final child in node.children) {
         collect(child);
       }
@@ -218,7 +227,7 @@ $space),''';
     final text = _quote(node.props['text']?.toString() ?? 'Radio');
     return '''RadioGroup<String>(
 $space  groupValue: radioGroupValues[$groupName],
-$space  onChanged: (value) => setState(() => radioGroupValues[$groupName] = value),
+$space  onChanged: ${_eventHandlerName(node, 'OnChanged')},
 $space  child: Row(
 $space    children: [
 $space      SizedBox(
@@ -282,7 +291,7 @@ $space    shape: RoundedRectangleBorder(
 $space      borderRadius: BorderRadius.circular($radius),
 $space    ),
 $space  ),
-$space  onPressed: () => onButtonPressed(${_quote(node.id)}),
+$space  onPressed: ${_eventHandlerName(node, 'OnPressed')},
 $space  child: FittedBox(fit: BoxFit.scaleDown, child: Text($text)),
 $space)''';
   }
@@ -358,6 +367,40 @@ $space  ),
 $space)''';
   }
 
+  String _exportEventHandlers(List<WidgetNode> nodes) {
+    final lines = <String>[];
+    void collect(WidgetNode node) {
+      switch (node.type) {
+        case 'button':
+          lines.add('''
+  void ${_eventHandlerName(node, 'OnPressed')}() {
+    // 여기에 ${_memberName(node)}의 클릭 이벤트를 구현합니다.
+  }
+''');
+          break;
+        case 'radioButton':
+          final groupName = _quote(_radioGroupName(node));
+          lines.add('''
+  void ${_eventHandlerName(node, 'OnChanged')}(String? value) {
+    // 여기에 ${_memberName(node)}의 변경 이벤트를 구현합니다.
+    setState(() => radioGroupValues[$groupName] = value);
+  }
+''');
+          break;
+        default:
+          break;
+      }
+      for (final child in node.children) {
+        collect(child);
+      }
+    }
+
+    for (final node in nodes) {
+      collect(node);
+    }
+    return lines.join('\n');
+  }
+
   String _mainAxis(dynamic value) {
     return switch (value?.toString()) {
       'center' => 'MainAxisAlignment.center',
@@ -403,6 +446,9 @@ $space)''';
       node.props['radioValue']?.toString().isNotEmpty == true
           ? node.props['radioValue'].toString()
           : node.id;
+
+  String _eventHandlerName(WidgetNode node, String suffix) =>
+      '${_memberName(node)}$suffix';
 
   String _formatNumber(dynamic value) {
     final number = value is num

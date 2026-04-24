@@ -193,8 +193,9 @@ class PropertyPanel extends StatelessWidget {
     List<String> choices,
     ValueChanged<String> onValueChanged,
   ) {
-    final selected =
-        choices.contains(value?.toString()) ? value.toString() : choices.first;
+    final selected = choices.contains(value?.toString())
+        ? value.toString()
+        : choices.first;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: DropdownButtonFormField<String>(

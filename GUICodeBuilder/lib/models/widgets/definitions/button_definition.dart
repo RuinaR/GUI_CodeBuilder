@@ -15,23 +15,25 @@ class ButtonDefinition extends WidgetDefinition {
   double get defaultHeight => 48;
   @override
   List<WidgetPropertyDefinition> get properties => const [
-        ...commonTextProperties,
-        ...commonBoxProperties,
-        WidgetPropertyDefinition(
-            key: 'foregroundColor',
-            label: 'foreground color',
-            kind: WidgetPropertyKind.text,
-            fallback: '#FFFFFF'),
-        WidgetPropertyDefinition(
-            key: 'onClick',
-            label: 'on click action',
-            kind: WidgetPropertyKind.text),
-      ];
+    ...commonTextProperties,
+    ...commonBoxProperties,
+    WidgetPropertyDefinition(
+      key: 'foregroundColor',
+      label: 'foreground color',
+      kind: WidgetPropertyKind.text,
+      fallback: '#FFFFFF',
+    ),
+    WidgetPropertyDefinition(
+      key: 'onClick',
+      label: 'on click action',
+      kind: WidgetPropertyKind.text,
+    ),
+  ];
   @override
   Map<String, dynamic> defaultProps(String id) => baseProps(id)
     ..addAll({
       'text': 'Button',
       'backgroundColor': '#2563EB',
-      'foregroundColor': '#FFFFFF'
+      'foregroundColor': '#FFFFFF',
     });
 }
