@@ -2,6 +2,28 @@
 
 Flutter 기반 GUI 코드 생성기입니다. 편집기에서 위젯 트리를 만들고 `page_ir.json` IR을 기준으로 Flutter, Flet, PyQt6, HTML/CSS 코드를 생성합니다.
 
+## Live Demo
+
+- GitHub Pages: https://ruinar.github.io/GUI_CodeBuilder/
+
+## GitHub Pages 배포
+
+이 저장소는 GitHub Actions에서 Flutter Web을 빌드한 뒤 GitHub Pages artifact로 배포합니다. 빌드 산출물은 브랜치에 커밋하지 않습니다.
+
+- workflow: `.github/workflows/deploy-pages.yml`
+- 실행 조건: `main` 브랜치 push 또는 수동 실행(`workflow_dispatch`)
+- 배포 산출물: `GUICodeBuilder/build/web`
+- Pages base href: `/GUI_CodeBuilder/`
+
+GitHub 저장소의 `Settings > Pages`에서 `Build and deployment`의 `Source`를 `GitHub Actions`로 선택하세요.
+
+로컬에서 같은 base path로 웹 빌드를 확인하려면 다음 명령을 실행합니다.
+
+```cmd
+cd GUICodeBuilder
+.flutter-sdk\flutter\bin\flutter.bat build web --release --base-href /GUI_CodeBuilder/
+```
+
 ## 실행
 
 프로젝트 폴더 기준 상대 경로로 동작합니다. Git에서 새로 받은 경우에도 아래 스크립트가 `.flutter-sdk/flutter`에 Flutter 3.41.7을 자동으로 준비합니다. 우선 Windows release zip을 내려받고, 실패하면 Git clone 방식으로 재시도합니다.
