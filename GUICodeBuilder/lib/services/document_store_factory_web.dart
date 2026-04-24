@@ -14,8 +14,8 @@ class WebDownloadDocumentStore implements DocumentStore {
 
   @override
   Future<void> saveExportBundle(DocumentExportBundle bundle) async {
-    for (final entry in bundle.flattenedFiles().entries) {
-      _downloadTextFile(_downloadName(entry.key), entry.value);
+    for (final entry in _webDownloadFiles(bundle).entries) {
+      _downloadTextFile(entry.key, entry.value);
       await Future<void>.delayed(const Duration(milliseconds: 40));
     }
   }
@@ -38,7 +38,22 @@ class WebDownloadDocumentStore implements DocumentStore {
     html.Url.revokeObjectUrl(url);
   }
 
-  String _downloadName(String relativePath) {
-    return 'exports_${relativePath.replaceAll('/', '_')}';
+  Map<String, String> _webDownloadFiles(DocumentExportBundle bundle) {
+    return {
+      bundle.irFileName: bundle.jsonText,
+      for (final exporterFiles in bundle.generatedFiles.values)
+        for (final entry in exporterFiles.entries)
+          if (_isGeneratedSourceFile(entry.key)) entry.key: entry.value,
+    };
+  }
+
+  bool _isGeneratedSourceFile(String relativePath) {
+    if (relativePath.contains('/')) {
+      return false;
+    }
+    if (relativePath == 'requirements_export.txt') {
+      return false;
+    }
+    return true;
   }
 }
