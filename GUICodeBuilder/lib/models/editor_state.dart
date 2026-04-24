@@ -39,9 +39,8 @@ class EditorState {
     _pushUndo();
     final node = _createDefaultNode(type);
     final resolvedParentId = parentId ?? treeInsertParentId;
-    final parentNode = resolvedParentId == null
-        ? null
-        : findNodeById(resolvedParentId);
+    final parentNode =
+        resolvedParentId == null ? null : findNodeById(resolvedParentId);
 
     if (parentNode != null && parentNode.canHaveChildren) {
       final childIndex = parentNode.children.length;
@@ -109,6 +108,10 @@ class EditorState {
 
   void updateNodeProp(WidgetNode node, String key, dynamic value) {
     _pushUndo();
+    if (key == 'name' || key == 'memberName') {
+      node.props[key] = _uniquePropValue(node, key, value.toString());
+      return;
+    }
     node.props[key] = value;
   }
 
@@ -237,16 +240,14 @@ class EditorState {
           node.y = _snap(bottom - node.height);
         }
       case 'hCenter':
-        final center = items
-            .map((node) => node.x + node.width / 2)
-            .reduce(_min);
+        final center =
+            items.map((node) => node.x + node.width / 2).reduce(_min);
         for (final node in items) {
           node.x = _snap(center - node.width / 2);
         }
       case 'vCenter':
-        final center = items
-            .map((node) => node.y + node.height / 2)
-            .reduce(_min);
+        final center =
+            items.map((node) => node.y + node.height / 2).reduce(_min);
         for (final node in items) {
           node.y = _snap(center - node.height / 2);
         }
@@ -301,6 +302,7 @@ class EditorState {
 
   // 현재 편집 상태를 JSON IR로 변환한다.
   Map<String, dynamic> toIrJson() {
+    _normalizeUniqueNames();
     return {
       'schemaVersion': 3,
       'generator': {
@@ -333,9 +335,9 @@ class EditorState {
       ..clear()
       ..addAll(
         (json['nodes'] as List? ?? <dynamic>[]).whereType<Map>().map(
-          (nodeJson) =>
-              WidgetNode.fromJson(Map<String, dynamic>.from(nodeJson)),
-        ),
+              (nodeJson) =>
+                  WidgetNode.fromJson(Map<String, dynamic>.from(nodeJson)),
+            ),
       );
     selectedIds.clear();
     _nextId = _collectMaxId(nodes) + 1;
@@ -361,9 +363,9 @@ class EditorState {
       ..clear()
       ..addAll(
         (snapshot['nodes'] as List? ?? <dynamic>[]).whereType<Map>().map(
-          (nodeJson) =>
-              WidgetNode.fromJson(Map<String, dynamic>.from(nodeJson)),
-        ),
+              (nodeJson) =>
+                  WidgetNode.fromJson(Map<String, dynamic>.from(nodeJson)),
+            ),
       );
     selectedIds.clear();
     treeInsertParentId = null;
@@ -382,6 +384,82 @@ class EditorState {
       height: definition.defaultHeight,
       props: definition.defaultProps(id),
     );
+  }
+
+  // 컨트롤 이름과 변수명이 중복되면 exporter가 안전하게 쓰도록 접미사를 붙인다.
+  void _normalizeUniqueNames() {
+    _normalizePropKey('name');
+    _normalizePropKey('memberName');
+    _normalizeRadioValues();
+  }
+
+  void _normalizePropKey(String key) {
+    final used = <String>{};
+    for (final node in _flattenNodes(nodes)) {
+      final raw = node.props[key]?.toString() ?? node.id;
+      final unique = _uniqueText(raw.isEmpty ? node.id : raw, used);
+      node.props[key] = unique;
+      used.add(unique);
+    }
+  }
+
+  void _normalizeRadioValues() {
+    final usedByGroup = <String, Set<String>>{};
+    for (final node in _flattenNodes(nodes)) {
+      if (node.type != 'radioButton') {
+        continue;
+      }
+      final groupName = node.props['groupName']?.toString().isNotEmpty == true
+          ? node.props['groupName'].toString()
+          : 'default';
+      final used = usedByGroup.putIfAbsent(groupName, () => <String>{});
+      final raw = node.props['radioValue']?.toString() ?? node.id;
+      final unique = _uniqueText(raw.isEmpty ? node.id : raw, used);
+      node.props['radioValue'] = unique;
+      used.add(unique);
+    }
+  }
+
+  String _uniquePropValue(WidgetNode target, String key, String value) {
+    final used = <String>{};
+    for (final node in _flattenNodes(nodes)) {
+      if (node.id == target.id) {
+        continue;
+      }
+      final current = node.props[key]?.toString();
+      if (current != null && current.isNotEmpty) {
+        used.add(current);
+      }
+    }
+    return _uniqueText(value.isEmpty ? target.id : value, used);
+  }
+
+  String _uniqueText(String value, Set<String> used) {
+    if (!used.contains(value)) {
+      return value;
+    }
+    var index = 1;
+    var candidate = '${value}_$index';
+    while (used.contains(candidate)) {
+      index += 1;
+      candidate = '${value}_$index';
+    }
+    return candidate;
+  }
+
+  List<WidgetNode> _flattenNodes(List<WidgetNode> targetNodes) {
+    final result = <WidgetNode>[];
+    void collect(WidgetNode node) {
+      result.add(node);
+      for (final child in node.children) {
+        collect(child);
+      }
+    }
+
+    for (final node in targetNodes) {
+      collect(node);
+    }
+    return result;
   }
 
   String _createId() {

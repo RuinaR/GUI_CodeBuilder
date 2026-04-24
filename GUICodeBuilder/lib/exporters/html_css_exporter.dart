@@ -1,7 +1,9 @@
-import '../models/export_format.dart';
+﻿import '../models/export_format.dart';
 import '../models/ir_document.dart';
 import '../models/widget_node.dart';
 import 'code_exporter.dart';
+
+part 'widget_generators/html_widget_generators.dart';
 
 // JSON IR을 HTML과 CSS 파일로 변환한다.
 class HtmlCssExporter implements CodeExporter {
@@ -78,7 +80,7 @@ body {
   overflow: hidden;
 }
 
-button, select, textarea, input[type="text"], input[type="range"], progress {
+button, select, textarea, input[type="text"], input[type="number"], input[type="range"], progress, table {
   width: 100%;
   height: 100%;
   box-sizing: border-box;
@@ -101,7 +103,16 @@ input[type="checkbox"], input[type="radio"] {
   flex: 0 0 auto;
 }
 
+input.vertical-slider {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 100%;
+  height: 100%;
+}
+
 textarea { resize: none; }
+table { border-collapse: collapse; font-size: 13px; }
+th, td { border: 1px solid #cbd5e1; padding: 4px 6px; text-align: left; }
 img { display: block; }
 ''';
   }
@@ -127,109 +138,37 @@ $space</div>''';
   }
 
   String _control(WidgetNode node, int indent) {
-    final space = ' ' * indent;
-    final childSpace = ' ' * (indent + 2);
-    final text = _escape(node.props['text']?.toString() ?? node.displayName);
-    switch (node.type) {
-      case 'button':
-        return '$space<button>$text</button>';
-      case 'radioButton':
-        final groupName = _escape(_radioGroupName(node));
-        final value = _escape(_radioValue(node));
-        final checked = node.props['selected'] == true ? ' checked' : '';
-        return '''$space<label class="control-label">
-$childSpace<input type="radio" name="$groupName" value="$value"$checked>
-$childSpace<span>$text</span>
-$space</label>''';
-      case 'checkBox':
-        final checked = node.props['checked'] == true ? ' checked' : '';
-        return '''$space<label class="control-label">
-$childSpace<input type="checkbox"$checked>
-$childSpace<span>$text</span>
-$space</label>''';
-      case 'comboBox':
-        final current = node.props['value']?.toString();
-        final options = _items(node)
-            .map(
-              (item) =>
-                  '$childSpace<option${item == current ? ' selected' : ''}>${_escape(item)}</option>',
-            )
-            .join('\n');
-        return '''$space<select>
-$options
-$space</select>''';
-      case 'textBox':
-        return '$space<textarea>$text</textarea>';
-      case 'lineEdit':
-        return '$space<input type="text" value="$text" placeholder="${_escape(node.props['placeholder']?.toString() ?? '')}">';
-      case 'progressBar':
-        return '$space<progress max="${node.props['max'] ?? 100}" value="${node.props['value'] ?? 0}"></progress>';
-      case 'horizontalSlider':
-      case 'verticalSlider':
-        return '$space<input type="range" min="${node.props['min'] ?? 0}" max="${node.props['max'] ?? 100}" value="${node.props['value'] ?? 0}">';
-      case 'image':
-        final src = node.props['src']?.toString() ?? '';
-        return src.isEmpty
-            ? '$space<div>$text</div>'
-            : '$space<img src="${_escape(src)}" alt="$text" style="width:100%;height:100%;object-fit:cover">';
-      case 'container':
-      case 'groupBox':
-      case 'tabs':
-      case 'scrollArea':
-      case 'row':
-      case 'column':
-        return node.props['title'] == null
-            ? ''
-            : '$space<strong>${_escape(node.props['title'].toString())}</strong>';
-      default:
-        return '$space<div>$text</div>';
-    }
+    return _htmlWidgetGenerators
+        .firstWhere((generator) => generator.supports(node.type))
+        .export(this, node, indent);
   }
 
   String _eventBindings(List<WidgetNode> nodes, int indent) {
     final lines = <String>[];
+    final selectors = <String, ({String selector, String event})>{
+      'radioButton': (selector: 'input[type="radio"]', event: 'change'),
+      'checkBox': (selector: 'input[type="checkbox"]', event: 'change'),
+      'spinBox': (selector: 'input[type="number"]', event: 'input'),
+      'doubleSpinBox': (selector: 'input[type="number"]', event: 'input'),
+      'comboBox': (selector: 'select', event: 'change'),
+      'textBox': (selector: 'textarea', event: 'input'),
+      'lineEdit': (selector: 'input[type="text"]', event: 'input'),
+      'horizontalSlider': (selector: 'input[type="range"]', event: 'input'),
+      'verticalSlider': (selector: 'input[type="range"]', event: 'input'),
+    };
     void collect(WidgetNode node) {
       final member = _memberName(node);
-      final handler = _eventHandlerName(node, 'onChange');
-      switch (node.type) {
-        case 'button':
+      if (node.type == 'button') {
+        lines.add(
+          "${' ' * indent}this.controls['$member']?.querySelector('button')?.addEventListener('click', this.${_eventHandlerName(node, 'onClick')}.bind(this));",
+        );
+      } else {
+        final binding = selectors[node.type];
+        if (binding != null) {
           lines.add(
-            "${' ' * indent}this.controls['$member']?.querySelector('button')?.addEventListener('click', this.${_eventHandlerName(node, 'onClick')}.bind(this));",
+            "${' ' * indent}this.controls['$member']?.querySelector('${binding.selector}')?.addEventListener('${binding.event}', this.${_eventHandlerName(node, 'onChange')}.bind(this));",
           );
-          break;
-        case 'radioButton':
-          lines.add(
-            "${' ' * indent}this.controls['$member']?.querySelector('input[type=\"radio\"]')?.addEventListener('change', this.$handler.bind(this));",
-          );
-          break;
-        case 'checkBox':
-          lines.add(
-            "${' ' * indent}this.controls['$member']?.querySelector('input[type=\"checkbox\"]')?.addEventListener('change', this.$handler.bind(this));",
-          );
-          break;
-        case 'comboBox':
-          lines.add(
-            "${' ' * indent}this.controls['$member']?.querySelector('select')?.addEventListener('change', this.$handler.bind(this));",
-          );
-          break;
-        case 'textBox':
-          lines.add(
-            "${' ' * indent}this.controls['$member']?.querySelector('textarea')?.addEventListener('input', this.$handler.bind(this));",
-          );
-          break;
-        case 'lineEdit':
-          lines.add(
-            "${' ' * indent}this.controls['$member']?.querySelector('input[type=\"text\"]')?.addEventListener('input', this.$handler.bind(this));",
-          );
-          break;
-        case 'horizontalSlider':
-        case 'verticalSlider':
-          lines.add(
-            "${' ' * indent}this.controls['$member']?.querySelector('input[type=\"range\"]')?.addEventListener('input', this.$handler.bind(this));",
-          );
-          break;
-        default:
-          break;
+        }
       }
       for (final child in node.children) {
         collect(child);
@@ -244,25 +183,25 @@ $space</select>''';
 
   String _eventHandlers(List<WidgetNode> nodes, int indent) {
     final lines = <String>[];
+    const changeTypes = {
+      'radioButton',
+      'checkBox',
+      'spinBox',
+      'doubleSpinBox',
+      'comboBox',
+      'textBox',
+      'lineEdit',
+      'horizontalSlider',
+      'verticalSlider',
+    };
     void collect(WidgetNode node) {
       final space = ' ' * indent;
-      switch (node.type) {
-        case 'button':
-          lines.add(
-              "$space${_eventHandlerName(node, 'onClick')}(event) {\n$space  // 여기에 ${_memberName(node)}의 클릭 이벤트를 구현합니다.\n$space}");
-          break;
-        case 'radioButton':
-        case 'checkBox':
-        case 'comboBox':
-        case 'textBox':
-        case 'lineEdit':
-        case 'horizontalSlider':
-        case 'verticalSlider':
-          lines.add(
-              "$space${_eventHandlerName(node, 'onChange')}(event) {\n$space  // 여기에 ${_memberName(node)}의 변경 이벤트를 구현합니다.\n$space}");
-          break;
-        default:
-          break;
+      if (node.type == 'button') {
+        lines.add(
+            "$space${_eventHandlerName(node, 'onClick')}(event) {\n$space  // 여기에 ${_memberName(node)}의 클릭 이벤트를 구현합니다.\n$space}");
+      } else if (changeTypes.contains(node.type)) {
+        lines.add(
+            "$space${_eventHandlerName(node, 'onChange')}(event) {\n$space  // 여기에 ${_memberName(node)}의 변경 이벤트를 구현합니다.\n$space}");
       }
       for (final child in node.children) {
         collect(child);
@@ -274,6 +213,45 @@ $space</select>''';
     }
     return lines.isEmpty ? '' : '${lines.join('\n')}\n';
   }
+
+  String _table(WidgetNode node, int indent) {
+    final space = ' ' * indent;
+    final childSpace = ' ' * (indent + 2);
+    final columns = _csv(node.props['columns']?.toString() ?? 'Name,Value');
+    final rows = (node.props['rows']?.toString() ?? '')
+        .split(';')
+        .where((row) => row.trim().isNotEmpty)
+        .map(_csv)
+        .toList();
+    final header = columns
+        .map((column) => '$childSpace<th>${_escape(column)}</th>')
+        .join('\n');
+    final body = rows.map((row) {
+      final cells = columns.asMap().entries.map((entry) {
+        final value = entry.key < row.length ? row[entry.key] : '';
+        return '${' ' * (indent + 4)}<td>${_escape(value)}</td>';
+      }).join('\n');
+      return '''$childSpace<tr>
+$cells
+$childSpace</tr>''';
+    }).join('\n');
+    return '''$space<table>
+$childSpace<thead>
+$childSpace<tr>
+$header
+$childSpace</tr>
+$childSpace</thead>
+$childSpace<tbody>
+$body
+$childSpace</tbody>
+$space</table>''';
+  }
+
+  List<String> _csv(String text) => text
+      .split(',')
+      .map((item) => item.trim())
+      .where((item) => item.isNotEmpty)
+      .toList();
 
   String _radioGroupName(WidgetNode node) =>
       node.props['groupName']?.toString().isNotEmpty == true

@@ -15,29 +15,29 @@ class RadioButtonDefinition extends WidgetDefinition {
   double get defaultHeight => 40;
   @override
   List<WidgetPropertyDefinition> get properties => const [
-    WidgetPropertyDefinition(
-      key: 'text',
-      label: 'text',
-      kind: WidgetPropertyKind.text,
-    ),
-    WidgetPropertyDefinition(
-      key: 'groupName',
-      label: 'radio group name',
-      kind: WidgetPropertyKind.text,
-      fallback: 'default',
-    ),
-    WidgetPropertyDefinition(
-      key: 'radioValue',
-      label: 'radio value',
-      kind: WidgetPropertyKind.text,
-    ),
-    WidgetPropertyDefinition(
-      key: 'selected',
-      label: 'selected by default',
-      kind: WidgetPropertyKind.boolean,
-      fallback: false,
-    ),
-  ];
+        WidgetPropertyDefinition(
+          key: 'text',
+          label: 'text',
+          kind: WidgetPropertyKind.text,
+        ),
+        WidgetPropertyDefinition(
+          key: 'groupName',
+          label: 'radio group name',
+          kind: WidgetPropertyKind.text,
+          fallback: 'default',
+        ),
+        WidgetPropertyDefinition(
+          key: 'radioValue',
+          label: 'radio value',
+          kind: WidgetPropertyKind.text,
+        ),
+        WidgetPropertyDefinition(
+          key: 'selected',
+          label: 'selected by default',
+          kind: WidgetPropertyKind.boolean,
+          fallback: false,
+        ),
+      ];
   @override
   Map<String, dynamic> defaultProps(String id) => baseProps(id)
     ..addAll({

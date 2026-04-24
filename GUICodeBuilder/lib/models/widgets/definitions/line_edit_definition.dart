@@ -1,32 +1,32 @@
 import '../widget_definition_base.dart';
 import '../widget_property_definition.dart';
 
-class ImageWidgetDefinition extends WidgetDefinition {
-  const ImageWidgetDefinition();
+class LineEditDefinition extends WidgetDefinition {
+  const LineEditDefinition();
   @override
-  String get typeId => 'image';
+  String get typeId => 'lineEdit';
   @override
-  String get label => 'Image widget';
+  String get label => 'Line text box';
   @override
-  String get description => '이미지 표시';
+  String get description => '한 줄 입력';
   @override
-  double get defaultWidth => 180;
+  double get defaultWidth => 220;
   @override
-  double get defaultHeight => 120;
+  double get defaultHeight => 42;
   @override
   List<WidgetPropertyDefinition> get properties => const [
         WidgetPropertyDefinition(
-          key: 'src',
-          label: 'image path/url',
+          key: 'placeholder',
+          label: 'placeholder',
           kind: WidgetPropertyKind.text,
         ),
         WidgetPropertyDefinition(
           key: 'text',
-          label: 'fallback text',
+          label: 'text',
           kind: WidgetPropertyKind.text,
         ),
       ];
   @override
   Map<String, dynamic> defaultProps(String id) =>
-      baseProps(id)..addAll({'src': '', 'text': 'Image'});
+      baseProps(id)..addAll({'text': '', 'placeholder': 'Input'});
 }

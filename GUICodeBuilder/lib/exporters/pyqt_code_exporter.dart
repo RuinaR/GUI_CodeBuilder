@@ -3,6 +3,8 @@ import '../models/ir_document.dart';
 import '../models/widget_node.dart';
 import 'code_exporter.dart';
 
+part 'widget_generators/pyqt_widget_generators.dart';
+
 // JSON IR을 PyQt6 코드로 변환한다.
 class PyQtCodeExporter implements CodeExporter {
   @override
@@ -29,7 +31,7 @@ class PyQtCodeExporter implements CodeExporter {
     final nodes = document.nodes;
 
     return '''
-from PyQt6 import QtCore, QtWidgets
+from PyQt6 import QtCore, QtGui, QtWidgets
 
 
 # GUI Code Builder에서 생성된 PyQt6 페이지이다.
@@ -115,51 +117,73 @@ pause
       '${space}self.$name.setGeometry(${_formatNumber(node.x)}, ${_formatNumber(node.y)}, ${_formatNumber(node.width)}, ${_formatNumber(node.height)})',
       '$space${_applyStyle(node)}',
     ];
+    final childParent = <String, String>{
+          'scrollArea': 'self.${name}_content',
+          'tabs': 'self.${name}_page_0',
+        }[node.type] ??
+        'self.$name';
     for (final child in node.children) {
-      lines.add(_exportMemberAssignment(child, indent, parent: 'self.$name'));
+      lines.add(_exportMemberAssignment(child, indent, parent: childParent));
     }
     return lines.where((line) => line.trim().isNotEmpty).join('\n');
   }
 
   String _createControl(WidgetNode node, String parent) {
+    return _pyqtWidgetGenerators
+        .firstWhere((generator) => generator.supports(node.type))
+        .create(this, node, parent);
+  }
+
+  String _createTableControl(WidgetNode node, String parent) {
     final name = _memberName(node);
-    return switch (node.type) {
-      'text' =>
-        'self.$name = QtWidgets.QLabel(${_quote(node.props['text']?.toString() ?? '')}, $parent)',
-      'button' =>
-        'self.$name = QtWidgets.QPushButton(${_quote(node.props['text']?.toString() ?? 'Button')}, $parent)\n        self.$name.clicked.connect(self.${_eventHandlerName(node, 'on_clicked')})',
-      'radioButton' => _createRadioControl(node, parent),
-      'checkBox' =>
-        'self.$name = QtWidgets.QCheckBox(${_quote(node.props['text']?.toString() ?? 'Check')}, $parent)\n        self.$name.stateChanged.connect(self.${_eventHandlerName(node, 'on_state_changed')})',
-      'spinBox' => 'self.$name = QtWidgets.QSpinBox($parent)',
-      'doubleSpinBox' => 'self.$name = QtWidgets.QDoubleSpinBox($parent)',
-      'comboBox' =>
-        'self.$name = QtWidgets.QComboBox($parent)\n        self.$name.addItems([${_items(node).map(_quote).join(', ')}])\n        self.$name.currentTextChanged.connect(self.${_eventHandlerName(node, 'on_current_text_changed')})',
-      'textBox' =>
-        'self.$name = QtWidgets.QTextEdit(${_quote(node.props['text']?.toString() ?? '')}, $parent)',
-      'lineEdit' =>
-        'self.$name = QtWidgets.QLineEdit($parent)\n        self.$name.setPlaceholderText(${_quote(node.props['placeholder']?.toString() ?? '')})\n        self.$name.textChanged.connect(self.${_eventHandlerName(node, 'on_text_changed')})',
-      'listBox' =>
-        'self.$name = QtWidgets.QListWidget($parent)\n        self.$name.addItems([${_items(node).map(_quote).join(', ')}])',
-      'progressBar' =>
-        'self.$name = QtWidgets.QProgressBar($parent)\n        self.$name.setValue(${_formatNumber(node.props['value'] ?? 0)})',
-      'horizontalSlider' =>
-        'self.$name = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal, $parent)\n        self.$name.valueChanged.connect(self.${_eventHandlerName(node, 'on_value_changed')})',
-      'verticalSlider' =>
-        'self.$name = QtWidgets.QSlider(QtCore.Qt.Orientation.Vertical, $parent)\n        self.$name.valueChanged.connect(self.${_eventHandlerName(node, 'on_value_changed')})',
-      'table' => 'self.$name = QtWidgets.QTableWidget($parent)',
-      'image' =>
-        'self.$name = QtWidgets.QLabel(${_quote(node.props['text']?.toString() ?? 'Image')}, $parent)',
-      'container' ||
-      'row' ||
-      'column' ||
-      'groupBox' ||
-      'tabs' ||
-      'scrollArea' =>
-        'self.$name = QtWidgets.QFrame($parent)',
-      _ =>
-        'self.$name = QtWidgets.QLabel(${_quote(node.displayName)}, $parent)',
-    };
+    final columns = _csv(node.props['columns']?.toString() ?? 'Name,Value');
+    final rows = _tableRows(node);
+    final headers = columns.map(_quote).join(', ');
+    final rowLines = <String>[
+      'self.$name = QtWidgets.QTableWidget($parent)',
+      'self.$name.setColumnCount(${columns.length})',
+      'self.$name.setHorizontalHeaderLabels([$headers])',
+      'self.$name.setRowCount(${rows.length})',
+    ];
+    for (var r = 0; r < rows.length; r += 1) {
+      for (var c = 0; c < columns.length; c += 1) {
+        final value = c < rows[r].length ? rows[r][c] : '';
+        rowLines.add(
+            'self.$name.setItem($r, $c, QtWidgets.QTableWidgetItem(${_quote(value)}))');
+      }
+    }
+    return rowLines.join('\n        ');
+  }
+
+  String _createImageControl(WidgetNode node, String parent) {
+    final name = _memberName(node);
+    final src = node.props['src']?.toString() ?? '';
+    if (src.isEmpty) {
+      return 'self.$name = QtWidgets.QLabel(${_quote(node.props['text']?.toString() ?? 'Image')}, $parent)';
+    }
+    return 'self.$name = QtWidgets.QLabel($parent)\n        self.${name}_pixmap = QtGui.QPixmap(${_quote(src)})\n        self.$name.setPixmap(self.${name}_pixmap.scaled(${_formatNumber(node.width)}, ${_formatNumber(node.height)}, QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation))';
+  }
+
+  String _createTabsControl(WidgetNode node, String parent) {
+    final name = _memberName(node);
+    final tabs = _csv(node.props['tabs']?.toString() ?? 'Tab 1,Tab 2');
+    final lines = <String>[
+      'self.$name = QtWidgets.QTabWidget($parent)',
+    ];
+    for (var i = 0; i < tabs.length; i += 1) {
+      lines.add('self.${name}_page_$i = QtWidgets.QWidget()');
+      lines.add('self.$name.addTab(self.${name}_page_$i, ${_quote(tabs[i])})');
+    }
+    if (tabs.isEmpty) {
+      lines.add('self.${name}_page_0 = QtWidgets.QWidget()');
+      lines.add('self.$name.addTab(self.${name}_page_0, ${_quote('Tab 1')})');
+    }
+    return lines.join('\n        ');
+  }
+
+  String _createScrollAreaControl(WidgetNode node, String parent) {
+    final name = _memberName(node);
+    return 'self.$name = QtWidgets.QScrollArea($parent)\n        self.$name.setWidgetResizable(False)\n        self.${name}_content = QtWidgets.QWidget()\n        self.${name}_content.setGeometry(0, 0, ${_formatNumber(node.width)}, ${_formatNumber(node.height)})\n        self.$name.setWidget(self.${name}_content)';
   }
 
   String _createRadioControl(WidgetNode node, String parent) {
@@ -194,59 +218,47 @@ pause
 
   String _exportEventHandlers(List<WidgetNode> nodes) {
     final lines = <String>[];
-    void collect(WidgetNode node) {
-      switch (node.type) {
-        case 'button':
-          lines.add(
-            '''    def ${_eventHandlerName(node, 'on_clicked')}(self, checked=False):
+    final builders = <String, String Function(WidgetNode)>{
+      'button': (node) =>
+          '''    def ${_eventHandlerName(node, 'on_clicked')}(self, checked=False):
         # 여기에 ${_memberName(node)}의 클릭 이벤트를 구현합니다.
         pass
 ''',
-          );
-          break;
-        case 'radioButton':
-          lines.add(
-            '''    def ${_eventHandlerName(node, 'on_toggled')}(self, checked):
+      'radioButton': (node) =>
+          '''    def ${_eventHandlerName(node, 'on_toggled')}(self, checked):
         # 여기에 ${_memberName(node)}의 선택 변경 이벤트를 구현합니다.
         pass
 ''',
-          );
-          break;
-        case 'checkBox':
-          lines.add(
-            '''    def ${_eventHandlerName(node, 'on_state_changed')}(self, state):
+      'checkBox': (node) =>
+          '''    def ${_eventHandlerName(node, 'on_state_changed')}(self, state):
         # 여기에 ${_memberName(node)}의 체크 변경 이벤트를 구현합니다.
         pass
 ''',
-          );
-          break;
-        case 'comboBox':
-          lines.add(
-            '''    def ${_eventHandlerName(node, 'on_current_text_changed')}(self, text):
+      'comboBox': (node) =>
+          '''    def ${_eventHandlerName(node, 'on_current_text_changed')}(self, text):
         # 여기에 ${_memberName(node)}의 선택값 변경 이벤트를 구현합니다.
         pass
 ''',
-          );
-          break;
-        case 'lineEdit':
-          lines.add(
-            '''    def ${_eventHandlerName(node, 'on_text_changed')}(self, text):
+      'lineEdit': (node) =>
+          '''    def ${_eventHandlerName(node, 'on_text_changed')}(self, text):
         # 여기에 ${_memberName(node)}의 텍스트 변경 이벤트를 구현합니다.
         pass
 ''',
-          );
-          break;
-        case 'horizontalSlider':
-        case 'verticalSlider':
-          lines.add(
-            '''    def ${_eventHandlerName(node, 'on_value_changed')}(self, value):
+      'horizontalSlider': (node) =>
+          '''    def ${_eventHandlerName(node, 'on_value_changed')}(self, value):
         # 여기에 ${_memberName(node)}의 값 변경 이벤트를 구현합니다.
         pass
 ''',
-          );
-          break;
-        default:
-          break;
+      'verticalSlider': (node) =>
+          '''    def ${_eventHandlerName(node, 'on_value_changed')}(self, value):
+        # 여기에 ${_memberName(node)}의 값 변경 이벤트를 구현합니다.
+        pass
+''',
+    };
+    void collect(WidgetNode node) {
+      final builder = builders[node.type];
+      if (builder != null) {
+        lines.add(builder(node));
       }
       for (final child in node.children) {
         collect(child);
@@ -258,6 +270,19 @@ pause
     }
     return lines.join('\n');
   }
+
+  List<String> _csv(String text) => text
+      .split(',')
+      .map((item) => item.trim())
+      .where((item) => item.isNotEmpty)
+      .toList();
+
+  List<List<String>> _tableRows(WidgetNode node) =>
+      (node.props['rows']?.toString() ?? '')
+          .split(';')
+          .where((row) => row.trim().isNotEmpty)
+          .map(_csv)
+          .toList();
 
   String _safeClassName(String name) {
     final compact = name.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '');

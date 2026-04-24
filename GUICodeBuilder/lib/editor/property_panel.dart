@@ -5,7 +5,7 @@ import '../models/widget_definition.dart';
 import '../models/widget_node.dart';
 
 // 선택된 노드와 캔버스의 속성을 편집한다.
-class PropertyPanel extends StatelessWidget {
+class PropertyPanel extends StatefulWidget {
   const PropertyPanel({
     required this.editorState,
     required this.onChanged,
@@ -18,10 +18,32 @@ class PropertyPanel extends StatelessWidget {
   final double width;
 
   @override
+  State<PropertyPanel> createState() => _PropertyPanelState();
+}
+
+class _PropertyPanelState extends State<PropertyPanel> {
+  final Map<String, TextEditingController> _controllers = {};
+  final Map<String, FocusNode> _focusNodes = {};
+
+  @override
+  void dispose() {
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    for (final focusNode in _focusNodes.values) {
+      focusNode.dispose();
+    }
+    super.dispose();
+  }
+
+  EditorState get editorState => widget.editorState;
+  VoidCallback get onChanged => widget.onChanged;
+
+  @override
   Widget build(BuildContext context) {
     final node = editorState.primarySelectedNode;
     return Container(
-      width: width,
+      width: widget.width,
       color: Colors.white,
       padding: const EdgeInsets.all(12),
       child: ListView(
@@ -43,21 +65,46 @@ class PropertyPanel extends StatelessWidget {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
-        _textField('class name', editorState.pageClassName, (value) {
-          editorState.pageClassName = value.isEmpty ? 'GeneratedPage' : value;
-        }),
-        _textField('page title', editorState.pageTitle, (value) {
-          editorState.pageTitle = value.isEmpty ? 'Generated Page' : value;
-        }),
-        _numberField('canvas width', editorState.canvasWidth, (value) {
-          editorState.canvasWidth = value.clamp(320, 4000);
-        }),
-        _numberField('canvas height', editorState.canvasHeight, (value) {
-          editorState.canvasHeight = value.clamp(240, 4000);
-        }),
-        _numberField('snap size', editorState.snapSize, (value) {
-          editorState.snapSize = value.clamp(1, 128);
-        }),
+        _textField(
+          'class name',
+          editorState.pageClassName,
+          (value) {
+            editorState.pageClassName = value.isEmpty ? 'GeneratedPage' : value;
+          },
+          fieldKey: 'canvas.className',
+        ),
+        _textField(
+          'page title',
+          editorState.pageTitle,
+          (value) {
+            editorState.pageTitle = value.isEmpty ? 'Generated Page' : value;
+          },
+          fieldKey: 'canvas.pageTitle',
+        ),
+        _numberField(
+          'canvas width',
+          editorState.canvasWidth,
+          (value) {
+            editorState.canvasWidth = value.clamp(320, 4000);
+          },
+          fieldKey: 'canvas.width',
+        ),
+        _numberField(
+          'canvas height',
+          editorState.canvasHeight,
+          (value) {
+            editorState.canvasHeight = value.clamp(240, 4000);
+          },
+          fieldKey: 'canvas.height',
+        ),
+        _numberField(
+          'snap size',
+          editorState.snapSize,
+          (value) {
+            editorState.snapSize = value.clamp(1, 128);
+          },
+          fieldKey: 'canvas.snapSize',
+        ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text('Responsive preview'),
@@ -105,21 +152,25 @@ class PropertyPanel extends StatelessWidget {
           'x',
           node.x,
           (value) => editorState.updateNodeFrame(node, x: value),
+          fieldKey: '${node.id}.x',
         ),
         _numberField(
           'y',
           node.y,
           (value) => editorState.updateNodeFrame(node, y: value),
+          fieldKey: '${node.id}.y',
         ),
         _numberField(
           'width',
           node.width,
           (value) => editorState.updateNodeFrame(node, width: value),
+          fieldKey: '${node.id}.width',
         ),
         _numberField(
           'height',
           node.height,
           (value) => editorState.updateNodeFrame(node, height: value),
+          fieldKey: '${node.id}.height',
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
@@ -132,13 +183,19 @@ class PropertyPanel extends StatelessWidget {
           },
         ),
         const Divider(height: 28),
-        _textField('name', node.props['name']?.toString() ?? node.id, (value) {
-          editorState.updateNodeProp(node, 'name', value);
-        }),
+        _textField(
+          'name',
+          node.props['name']?.toString() ?? node.id,
+          (value) {
+            editorState.updateNodeProp(node, 'name', value);
+          },
+          fieldKey: '${node.id}.name',
+        ),
         _textField(
           'member variable',
           node.props['memberName']?.toString() ?? node.id,
           (value) => editorState.updateNodeProp(node, 'memberName', value),
+          fieldKey: '${node.id}.memberName',
         ),
         for (final property in definition.properties)
           _propertyField(node, property),
@@ -150,9 +207,14 @@ class PropertyPanel extends StatelessWidget {
     final rawValue = node.props[property.key] ?? property.fallback ?? '';
     switch (property.kind) {
       case WidgetPropertyKind.number:
-        return _numberField(property.label, _readDouble(rawValue, 0), (value) {
-          editorState.updateNodeProp(node, property.key, value);
-        });
+        return _numberField(
+          property.label,
+          _readDouble(rawValue, 0),
+          (value) {
+            editorState.updateNodeProp(node, property.key, value);
+          },
+          fieldKey: '${node.id}.${property.key}',
+        );
       case WidgetPropertyKind.boolean:
         return SwitchListTile(
           contentPadding: EdgeInsets.zero,
@@ -177,12 +239,14 @@ class PropertyPanel extends StatelessWidget {
           rawValue.toString(),
           (value) => editorState.updateNodeProp(node, property.key, value),
           minLines: 3,
+          fieldKey: '${node.id}.${property.key}',
         );
       case WidgetPropertyKind.text:
         return _textField(
           property.label,
           rawValue.toString(),
           (value) => editorState.updateNodeProp(node, property.key, value),
+          fieldKey: '${node.id}.${property.key}',
         );
     }
   }
@@ -193,9 +257,8 @@ class PropertyPanel extends StatelessWidget {
     List<String> choices,
     ValueChanged<String> onValueChanged,
   ) {
-    final selected = choices.contains(value?.toString())
-        ? value.toString()
-        : choices.first;
+    final selected =
+        choices.contains(value?.toString()) ? value.toString() : choices.first;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: DropdownButtonFormField<String>(
@@ -223,13 +286,16 @@ class PropertyPanel extends StatelessWidget {
   Widget _numberField(
     String label,
     double value,
-    ValueChanged<double> onValueChanged,
-  ) {
-    final controller = TextEditingController(text: _formatNumber(value));
+    ValueChanged<double> onValueChanged, {
+    required String fieldKey,
+  }) {
+    final controller = _controllerFor(fieldKey, _formatNumber(value));
+    final focusNode = _focusNodeFor(fieldKey);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
         decoration: InputDecoration(
           labelText: label,
           isDense: true,
@@ -251,13 +317,16 @@ class PropertyPanel extends StatelessWidget {
     String label,
     String value,
     ValueChanged<String> onValueChanged, {
+    required String fieldKey,
     int minLines = 1,
   }) {
-    final controller = TextEditingController(text: value);
+    final controller = _controllerFor(fieldKey, value);
+    final focusNode = _focusNodeFor(fieldKey);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
         decoration: InputDecoration(
           labelText: label,
           isDense: true,
@@ -272,6 +341,24 @@ class PropertyPanel extends StatelessWidget {
       ),
     );
   }
+
+  TextEditingController _controllerFor(String key, String value) {
+    final controller = _controllers.putIfAbsent(
+      key,
+      () => TextEditingController(text: value),
+    );
+    final focusNode = _focusNodeFor(key);
+    if (!focusNode.hasFocus && controller.text != value) {
+      controller.value = TextEditingValue(
+        text: value,
+        selection: TextSelection.collapsed(offset: value.length),
+      );
+    }
+    return controller;
+  }
+
+  FocusNode _focusNodeFor(String key) =>
+      _focusNodes.putIfAbsent(key, FocusNode.new);
 
   double _readDouble(dynamic value, double fallback) {
     if (value is num) {
