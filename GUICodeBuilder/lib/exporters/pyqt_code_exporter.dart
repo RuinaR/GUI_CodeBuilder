@@ -12,9 +12,15 @@ class PyQtCodeExporter implements CodeExporter {
 
   @override
   Map<String, String> exportFiles(Map<String, dynamic> irJson) {
+    final document = IrDocument.fromJson(irJson);
+    final className = _safeClassName(document.className);
+    final pyqtClassName = '${className}PyQt';
+    final pageFileName = '$pyqtClassName.py';
+    final styleFileName = '$pyqtClassName.qss';
     return {
-      format.fileName: exportPage(irJson),
-      'test_mains/pyqt_test_main.py': _exportTestMain(irJson),
+      pageFileName: exportPage(irJson),
+      styleFileName: _baseStyleSheet(),
+      'test_mains/pyqt_test_main.py': _exportTestMain(irJson, pageFileName),
       'test_mains/run_pyqt_test.cmd': _exportRunPyQtTestCmd(),
       'requirements_export.txt': 'flet==0.82.2\nPyQt6==6.11.0\n',
       'tools/install_export_python_deps.cmd':
@@ -26,24 +32,32 @@ class PyQtCodeExporter implements CodeExporter {
   String exportPage(Map<String, dynamic> irJson) {
     final document = IrDocument.fromJson(irJson);
     final className = _safeClassName(document.className);
+    final title = _quote(document.title);
     final width = _formatNumber(document.width);
     final height = _formatNumber(document.height);
     final nodes = document.nodes;
 
     return '''
+from pathlib import Path
+
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 
 # GUI Code Builder에서 생성된 PyQt6 페이지이다.
-class ${className}PyQtWindow(QtWidgets.QWidget):
+class $className(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Generated Page")
+        self.setWindowTitle($title)
         self.resize($width, $height)
         self.setFont(QtGui.QFont("Segoe UI", 10))
-        self.setStyleSheet(${_multilineQuote(_baseStyleSheet())})
+        self._load_style_sheet()
 ${_exportMembers(nodes)}
-        self.radio_groups = {}
+        self.radio_groups: dict[str, QtWidgets.QButtonGroup] = {}
+
+    def _load_style_sheet(self):
+        style_path = Path(__file__).with_suffix(".qss")
+        if style_path.exists():
+            self.setStyleSheet(style_path.read_text(encoding="utf-8"))
 
     def initialize(self):
 ${nodes.map((node) => _exportMemberAssignment(node, 8, parent: 'self')).join('\n')}
@@ -58,9 +72,10 @@ ${_exportEventHandlers(nodes)}
 ''';
   }
 
-  String _exportTestMain(Map<String, dynamic> irJson) {
+  String _exportTestMain(Map<String, dynamic> irJson, String pageFileName) {
     final document = IrDocument.fromJson(irJson);
     final className = _safeClassName(document.className);
+    final moduleName = pageFileName.replaceAll('.py', '');
     return '''
 import sys
 
@@ -70,13 +85,13 @@ from PyQt6 import QtWidgets
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from pyqt_generated_page import ${className}PyQtWindow
+from $moduleName import $className
 
 
 # 생성된 PyQt6 페이지를 바로 실행하는 테스트 main이다.
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    window = ${className}PyQtWindow()
+    window = $className()
     window.initialize()
     window.build()
     sys.exit(app.exec())
@@ -95,7 +110,8 @@ pause
   String _exportMembers(List<WidgetNode> nodes) {
     final lines = <String>[];
     void collect(WidgetNode node) {
-      lines.add('        self.${_memberName(node)} = None');
+      lines.add(
+          '        self.${_memberName(node)}: ${_pyqtType(node)} | None = None');
       for (final child in node.children) {
         collect(child);
       }
@@ -105,6 +121,33 @@ pause
       collect(node);
     }
     return lines.join('\n');
+  }
+
+  String _pyqtType(WidgetNode node) {
+    return switch (node.widgetType) {
+      WidgetType.button => 'QtWidgets.QPushButton',
+      WidgetType.radioButton => 'QtWidgets.QRadioButton',
+      WidgetType.checkBox => 'QtWidgets.QCheckBox',
+      WidgetType.spinBox => 'QtWidgets.QSpinBox',
+      WidgetType.doubleSpinBox => 'QtWidgets.QDoubleSpinBox',
+      WidgetType.comboBox => 'QtWidgets.QComboBox',
+      WidgetType.textBox => 'QtWidgets.QTextEdit',
+      WidgetType.lineEdit => 'QtWidgets.QLineEdit',
+      WidgetType.listBox => 'QtWidgets.QListWidget',
+      WidgetType.progressBar => 'QtWidgets.QProgressBar',
+      WidgetType.horizontalSlider ||
+      WidgetType.verticalSlider =>
+        'QtWidgets.QSlider',
+      WidgetType.table => 'QtWidgets.QTableWidget',
+      WidgetType.image || WidgetType.label => 'QtWidgets.QLabel',
+      WidgetType.groupBox => 'QtWidgets.QGroupBox',
+      WidgetType.tabs => 'QtWidgets.QTabWidget',
+      WidgetType.scrollArea => 'QtWidgets.QScrollArea',
+      WidgetType.container ||
+      WidgetType.row ||
+      WidgetType.column =>
+        'QtWidgets.QFrame',
+    };
   }
 
   String _exportMemberAssignment(
@@ -164,7 +207,7 @@ pause
     if (src.isEmpty) {
       return 'self.$name = QtWidgets.QLabel(${_quote(node.payload.string('text', fallback: 'Image'))}, $parent)';
     }
-    return 'self.$name = QtWidgets.QLabel($parent)\n        self.${name}_pixmap = QtGui.QPixmap(${_quote(src)})\n        self.$name.setPixmap(self.${name}_pixmap.scaled(${_formatNumber(node.width)}, ${_formatNumber(node.height)}, QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation))';
+    return 'self.$name = QtWidgets.QLabel($parent)\n        self.${name}_pixmap: QtGui.QPixmap = QtGui.QPixmap(${_quote(src)})\n        self.$name.setPixmap(self.${name}_pixmap.scaled(${_formatNumber(node.width)}, ${_formatNumber(node.height)}, QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation))';
   }
 
   String _createTabsControl(WidgetNode node, String parent) {
@@ -174,11 +217,12 @@ pause
       'self.$name = QtWidgets.QTabWidget($parent)',
     ];
     for (var i = 0; i < tabs.length; i += 1) {
-      lines.add('self.${name}_page_$i = QtWidgets.QWidget()');
+      lines
+          .add('self.${name}_page_$i: QtWidgets.QWidget = QtWidgets.QWidget()');
       lines.add('self.$name.addTab(self.${name}_page_$i, ${_quote(tabs[i])})');
     }
     if (tabs.isEmpty) {
-      lines.add('self.${name}_page_0 = QtWidgets.QWidget()');
+      lines.add('self.${name}_page_0: QtWidgets.QWidget = QtWidgets.QWidget()');
       lines.add('self.$name.addTab(self.${name}_page_0, ${_quote('Tab 1')})');
     }
     return lines.join('\n        ');
@@ -186,7 +230,7 @@ pause
 
   String _createScrollAreaControl(WidgetNode node, String parent) {
     final name = _memberName(node);
-    return 'self.$name = QtWidgets.QScrollArea($parent)\n        self.$name.setWidgetResizable(False)\n        self.${name}_content = QtWidgets.QWidget()\n        self.${name}_content.setGeometry(0, 0, ${_formatNumber(node.width)}, ${_formatNumber(node.height)})\n        self.$name.setWidget(self.${name}_content)';
+    return 'self.$name = QtWidgets.QScrollArea($parent)\n        self.$name.setWidgetResizable(False)\n        self.${name}_content: QtWidgets.QWidget = QtWidgets.QWidget()\n        self.${name}_content.setGeometry(0, 0, ${_formatNumber(node.width)}, ${_formatNumber(node.height)})\n        self.$name.setWidget(self.${name}_content)';
   }
 
   String _createRadioControl(WidgetNode node, String parent) {
@@ -255,6 +299,16 @@ QWidget {
 }
 QPushButton {
   min-height: 24px;
+}
+QPushButton:hover {
+  background-color: #1D4ED8;
+}
+QPushButton:pressed {
+  background-color: #1E40AF;
+}
+QPushButton:focus {
+  outline: none;
+  border: 2px solid #93C5FD;
 }
 QLineEdit, QTextEdit, QSpinBox, QDoubleSpinBox, QComboBox {
   background-color: #FFFFFF;
@@ -440,12 +494,6 @@ QGroupBox::title {
 
   String _quote(String text) {
     return '"${text.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"';
-  }
-
-  String _multilineQuote(String text) {
-    final escaped =
-        text.replaceAll('\\', '\\\\').replaceAll('"""', '\\"\\"\\"').trim();
-    return '"""$escaped"""';
   }
 
   String _radioGroupName(WidgetNode node) =>

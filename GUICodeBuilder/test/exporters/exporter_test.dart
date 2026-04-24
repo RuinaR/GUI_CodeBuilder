@@ -8,11 +8,19 @@ void main() {
   group('FlutterCodeExporter', () {
     test('generates lifecycle, controls, and grouped radio code', () {
       final files = FlutterCodeExporter().exportFiles(_representativeIr());
-      final code = _normalized(files['flutter_generated_page.dart']!);
+      final code = _normalized(files['ExporterSmokePage.dart']!);
 
+      expect(files, containsPair('ExporterSmokePage.dart', isNotEmpty));
       expect(
           files, containsPair('test_mains/flutter_test_main.dart', isNotEmpty));
+      expect(files['test_mains/flutter_test_main.dart'],
+          contains("import '../ExporterSmokePage.dart';"));
+      expect(files['test_mains/flutter_test_main.dart'],
+          contains("MaterialApp(title: 'Exporter Smoke Page'"));
       expect(code, contains('class ExporterSmokePage extends StatefulWidget'));
+      expect(files['test_mains/run_flutter_test.cmd'],
+          contains('set "GUI_CODE_BUILDER_WINDOW_TITLE=Exporter Smoke Page"'));
+      expect(code, isNot(contains('AppBar(title:')));
       expect(code, contains('void initialize()'));
       expect(code, contains('void release()'));
       expect(code, contains('ElevatedButton('));
@@ -38,10 +46,14 @@ void main() {
   group('FletCodeExporter', () {
     test('generates lifecycle, positioned controls, and radio group code', () {
       final files = FletCodeExporter().exportFiles(_representativeIr());
-      final code = _normalized(files['flet_generated_page.py']!);
+      final code = _normalized(files['ExporterSmokePage.py']!);
 
+      expect(files, containsPair('ExporterSmokePage.py', isNotEmpty));
       expect(files, containsPair('test_mains/flet_test_main.py', isNotEmpty));
+      expect(files['test_mains/flet_test_main.py'],
+          contains('from ExporterSmokePage import main'));
       expect(code, contains('class ExporterSmokePage:'));
+      expect(code, contains('page.title = "Exporter Smoke Page"'));
       expect(code, contains('def initialize(self):'));
       expect(code, contains('def build(self, page: ft.Page):'));
       expect(code, contains('ft.Stack('));
@@ -75,32 +87,49 @@ void main() {
   group('PyQtCodeExporter', () {
     test('generates window, widgets, handlers, and radio grouping code', () {
       final files = PyQtCodeExporter().exportFiles(_representativeIr());
-      final code = _normalized(files['pyqt_generated_page.py']!);
+      final code = _normalized(files['ExporterSmokePagePyQt.py']!);
+      final style = files['ExporterSmokePagePyQt.qss']!;
 
+      expect(files, containsPair('ExporterSmokePagePyQt.py', isNotEmpty));
+      expect(files, containsPair('ExporterSmokePagePyQt.qss', isNotEmpty));
       expect(files, containsPair('test_mains/pyqt_test_main.py', isNotEmpty));
+      expect(files['test_mains/pyqt_test_main.py'],
+          contains('from ExporterSmokePagePyQt import ExporterSmokePage'));
       expect(files, containsPair('requirements_export.txt', contains('PyQt6')));
       expect(
         files,
         containsPair('requirements_export.txt', contains('flet==0.82.2')),
       );
-      expect(code,
-          contains('class ExporterSmokePagePyQtWindow(QtWidgets.QWidget):'));
+      expect(code, contains('class ExporterSmokePage(QtWidgets.QWidget):'));
+      expect(code, contains('self.setWindowTitle("Exporter Smoke Page")'));
+      expect(code, isNot(contains('PyQtWindow')));
       expect(code, contains('def initialize(self):'));
+      expect(code,
+          contains('self.runButton: QtWidgets.QPushButton | None = None'));
+      expect(
+          code, contains('self.choiceA: QtWidgets.QRadioButton | None = None'));
+      expect(
+          code, contains('self.notesBox: QtWidgets.QTextEdit | None = None'));
+      expect(code,
+          contains('self.resultTable: QtWidgets.QTableWidget | None = None'));
+      expect(code,
+          contains('self.radio_groups: dict[str, QtWidgets.QButtonGroup]'));
       expect(code, contains('QtWidgets.QPushButton("Run"'));
       expect(code, contains('QtWidgets.QButtonGroup(self)'));
       expect(code, contains('self.radio_groups["choices"].setExclusive(True)'));
       expect(code, contains('self.setFont(QtGui.QFont("Segoe UI", 10))'));
-      expect(code, contains('self.setStyleSheet('));
-      expect(code, contains('QPushButton:hover'));
-      expect(code, contains('QPushButton:pressed'));
-      expect(code, contains('-qt-font-smoothing-type: antialias'));
-      expect(code, contains('font-family: "Segoe UI", Arial, sans-serif'));
+      expect(code, contains('self._load_style_sheet()'));
+      expect(code, contains('Path(__file__).with_suffix(".qss")'));
+      expect(style, contains('QPushButton:hover'));
+      expect(style, contains('QPushButton:pressed'));
+      expect(style, contains('-qt-font-smoothing-type: antialias'));
+      expect(style, contains('font-family: "Segoe UI", Arial, sans-serif'));
       expect(code, contains('setTextFormat(QtCore.Qt.TextFormat.PlainText)'));
       expect(code, contains('setWordWrap(True)'));
       expect(code, contains('QtCore.Qt.AlignmentFlag.AlignVCenter'));
-      expect(code, contains('QCheckBox::indicator:checked'));
-      expect(code, contains('QRadioButton::indicator:checked'));
-      expect(code, contains('QLineEdit:focus'));
+      expect(style, contains('QCheckBox::indicator:checked'));
+      expect(style, contains('QRadioButton::indicator:checked'));
+      expect(style, contains('QLineEdit:focus'));
       expect(code, contains('self.enableFeature.setChecked(True)'));
       expect(code, contains('self.modeSelect.setCurrentText("Manual")'));
       expect(
@@ -117,7 +146,9 @@ void main() {
               'self.notesBox.textChanged.connect(self.notesBox_on_text_changed)'));
       expect(code, contains('QtWidgets.QTableWidget(self)'));
       expect(code, contains('QtWidgets.QTabWidget(self)'));
+      expect(code, contains('self.mainTabs_page_0: QtWidgets.QWidget'));
       expect(code, contains('QtWidgets.QScrollArea(self)'));
+      expect(code, contains('self.scrollRegion_content: QtWidgets.QWidget'));
       expect(code, contains('QtWidgets.QFrame(self)'));
       expect(code, contains('def runButton_on_clicked(self, checked=False):'));
     });
@@ -127,12 +158,18 @@ void main() {
     test('generates HTML, CSS, controls, and event bindings', () {
       final exporter = HtmlCssExporter();
       final files = exporter.exportFiles(_representativeIr());
-      final html = _normalized(files['html_generated_page.html']!);
-      final css = _normalized(files['html_generated_page.css']!);
+      final html = _normalized(files['ExporterSmokePage.html']!);
+      final css = _normalized(files['ExporterSmokePage.css']!);
 
+      expect(files, containsPair('ExporterSmokePage.html', isNotEmpty));
+      expect(files, containsPair('ExporterSmokePage.css', isNotEmpty));
       expect(files, containsPair('test_mains/run_html_test.cmd', isNotEmpty));
       expect(html, contains('<title>Exporter Smoke Page</title>'));
-      expect(html, contains('class ExporterSmokePageHtmlPage'));
+      expect(html, contains('class ExporterSmokePage'));
+      expect(html, isNot(contains('HtmlPage')));
+      expect(html, contains('href="ExporterSmokePage.css"'));
+      expect(files['test_mains/run_html_test.cmd'],
+          contains('ExporterSmokePage.html'));
       expect(html, contains('data-member="runButton"'));
       expect(html, contains('<button>Run</button>'));
       expect(html, contains('input type="radio"'));

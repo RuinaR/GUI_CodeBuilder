@@ -12,6 +12,10 @@ class LocalFileDocumentStore implements DocumentStore {
     final exportDirectory = Directory(exportDirectoryPath);
     if (!exportDirectory.existsSync()) {
       exportDirectory.createSync(recursive: true);
+    } else {
+      for (final entity in exportDirectory.listSync()) {
+        entity.deleteSync(recursive: true);
+      }
     }
 
     for (final entry in bundle.flattenedFiles().entries) {

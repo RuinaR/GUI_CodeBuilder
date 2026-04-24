@@ -12,10 +12,15 @@ class FlutterCodeExporter implements CodeExporter {
 
   @override
   Map<String, String> exportFiles(Map<String, dynamic> irJson) {
+    final document = IrDocument.fromJson(irJson);
+    final className = _safeClassName(document.className);
+    final pageFileName = '$className.dart';
     return {
-      format.fileName: exportPage(irJson),
-      'test_mains/flutter_test_main.dart': _exportTestMain(irJson),
-      'test_mains/run_flutter_test.cmd': _exportRunFlutterTestCmd(),
+      pageFileName: exportPage(irJson),
+      'test_mains/flutter_test_main.dart':
+          _exportTestMain(irJson, pageFileName),
+      'test_mains/run_flutter_test.cmd':
+          _exportRunFlutterTestCmd(document.title),
     };
   }
 
@@ -96,22 +101,24 @@ ${_exportEventHandlers(nodes)}
 ''';
   }
 
-  String _exportTestMain(Map<String, dynamic> irJson) {
+  String _exportTestMain(Map<String, dynamic> irJson, String pageFileName) {
     final document = IrDocument.fromJson(irJson);
     final className = _safeClassName(document.className);
+    final title = _quote(document.title);
     return '''
 import 'package:flutter/material.dart';
 
-import '../${format.fileName}';
+import '../$pageFileName';
 
 // 생성된 Flutter 페이지를 바로 실행하는 테스트 main이다.
 void main() {
-  runApp(const MaterialApp(debugShowCheckedModeBanner: false, home: $className(autoInitialize: true)));
+  runApp(const MaterialApp(title: $title, debugShowCheckedModeBanner: false, home: $className(autoInitialize: true)));
 }
 ''';
   }
 
-  String _exportRunFlutterTestCmd() {
+  String _exportRunFlutterTestCmd(String title) {
+    final cmdTitle = _cmdSetValue(title);
     return r'''
 @echo off
 setlocal
@@ -121,6 +128,9 @@ set "APPDATA=%ROOT%.dart-home\AppData"
 set "LOCALAPPDATA=%ROOT%.dart-home\LocalAppData"
 set "PUB_CACHE=%ROOT%.dart-home\PubCache"
 set "FLUTTER_ROOT=%ROOT%.flutter-sdk\flutter"
+'''
+        'set "GUI_CODE_BUILDER_WINDOW_TITLE=$cmdTitle"\n'
+        r'''
 
 if exist "%ROOT%tools\ensure_flutter_sdk.cmd" (
   call "%ROOT%tools\ensure_flutter_sdk.cmd"
@@ -897,6 +907,10 @@ $space),''';
 
   String _quote(String text) {
     return "'${text.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'";
+  }
+
+  String _cmdSetValue(String text) {
+    return text.replaceAll('%', '%%').replaceAll('"', "'");
   }
 
   String _exportColor(String hexColor) {

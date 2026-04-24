@@ -374,8 +374,7 @@ class _EditorScreenState extends State<EditorScreen> {
     };
     final generatedCodes = {
       for (final exporter in _exporters)
-        exporter.format:
-            generatedFiles[exporter.format]![exporter.format.fileName]!,
+        exporter.format: generatedFiles[exporter.format]!.values.first,
     };
     await _jsonService.saveExportFiles(
       jsonText: jsonText,

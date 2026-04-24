@@ -2,8 +2,30 @@
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
 
+#include <string>
+
 #include "flutter_window.h"
 #include "utils.h"
+
+std::wstring WindowTitleFromEnvironment() {
+  constexpr wchar_t kDefaultTitle[] = L"gui_code_builder";
+  constexpr wchar_t kTitleEnvName[] = L"GUI_CODE_BUILDER_WINDOW_TITLE";
+
+  DWORD length = ::GetEnvironmentVariableW(kTitleEnvName, nullptr, 0);
+  if (length == 0) {
+    return kDefaultTitle;
+  }
+
+  std::wstring title(length, L'\0');
+  DWORD written =
+      ::GetEnvironmentVariableW(kTitleEnvName, title.data(), length);
+  if (written == 0) {
+    return kDefaultTitle;
+  }
+
+  title.resize(written);
+  return title.empty() ? kDefaultTitle : title;
+}
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
@@ -27,7 +49,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
-  if (!window.Create(L"gui_code_builder", origin, size)) {
+  const std::wstring window_title = WindowTitleFromEnvironment();
+  if (!window.Create(window_title, origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

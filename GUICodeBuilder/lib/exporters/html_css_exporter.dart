@@ -12,17 +12,23 @@ class HtmlCssExporter implements CodeExporter {
 
   @override
   Map<String, String> exportFiles(Map<String, dynamic> irJson) {
+    final document = IrDocument.fromJson(irJson);
+    final className = _safeClassName(document.className);
+    final htmlFileName = '$className.html';
+    final cssFileName = '$className.css';
     return {
-      format.fileName: exportPage(irJson),
-      'html_generated_page.css': exportCss(irJson),
+      htmlFileName: exportPage(irJson),
+      cssFileName: exportCss(irJson),
       'test_mains/run_html_test.cmd':
-          '@echo off\nstart "" "%~dp0..\\html_generated_page.html"\n',
+          '@echo off\nstart "" "%~dp0..\\$htmlFileName"\n',
     };
   }
 
   @override
   String exportPage(Map<String, dynamic> irJson) {
     final document = IrDocument.fromJson(irJson);
+    final className = _safeClassName(document.className);
+    final cssFileName = '$className.css';
     final nodes =
         document.nodes.map((node) => _positionedNode(node, 4)).join('\n');
     return '''
@@ -32,14 +38,14 @@ class HtmlCssExporter implements CodeExporter {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${_escape(document.title)}</title>
-  <link rel="stylesheet" href="html_generated_page.css">
+  <link rel="stylesheet" href="$cssFileName">
 </head>
 <body>
   <main id="page" class="page" style="width:${_n(document.width)}px;height:${_n(document.height)}px;">
 $nodes
   </main>
   <script>
-    class ${_safeClassName(document.className)}HtmlPage {
+    class $className {
       constructor(root) { this.root = root; this.controls = {}; }
       initialize() {
         this.root.querySelectorAll('[data-member]').forEach((el) => this.controls[el.dataset.member] = el);
@@ -49,7 +55,7 @@ ${_eventBindings(document.nodes, 8)}
       release() { this.root.remove(); }
 ${_eventHandlers(document.nodes, 6)}
     }
-    const generatedPage = new ${_safeClassName(document.className)}HtmlPage(document.getElementById('page'));
+    const generatedPage = new $className(document.getElementById('page'));
     generatedPage.initialize();
     generatedPage.build();
   </script>

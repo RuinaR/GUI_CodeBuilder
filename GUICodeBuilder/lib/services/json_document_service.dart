@@ -71,11 +71,12 @@ class JsonDocumentService {
 ```text
 exports/
   page_ir.json
-  flutter_generated_page.dart
-  flet_generated_page.py
-  pyqt_generated_page.py
-  html_generated_page.html
-  html_generated_page.css
+  <ClassName>.dart
+  <ClassName>.py
+  <ClassName>PyQt.py
+  <ClassName>PyQt.qss
+  <ClassName>.html
+  <ClassName>.css
   requirements_export.txt
   README.md
   test_mains/

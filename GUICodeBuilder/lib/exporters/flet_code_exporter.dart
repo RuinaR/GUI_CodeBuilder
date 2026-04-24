@@ -12,9 +12,12 @@ class FletCodeExporter implements CodeExporter {
 
   @override
   Map<String, String> exportFiles(Map<String, dynamic> irJson) {
+    final document = IrDocument.fromJson(irJson);
+    final className = _safeClassName(document.className);
+    final pageFileName = '$className.py';
     return {
-      format.fileName: exportPage(irJson),
-      'test_mains/flet_test_main.py': _exportTestMain(),
+      pageFileName: exportPage(irJson),
+      'test_mains/flet_test_main.py': _exportTestMain(pageFileName),
       'test_mains/run_flet_test.cmd': _exportRunFletTestCmd(),
     };
   }
@@ -23,6 +26,7 @@ class FletCodeExporter implements CodeExporter {
   String exportPage(Map<String, dynamic> irJson) {
     final document = IrDocument.fromJson(irJson);
     final className = _safeClassName(document.className);
+    final title = _quote(document.title);
     final width = _formatNumber(document.width);
     final height = _formatNumber(document.height);
     final nodes = document.nodes;
@@ -40,7 +44,7 @@ ${_exportMembers(nodes)}
 ${nodes.map((node) => _exportMemberAssignment(node, 8)).join('\n')}
 
     def build(self, page: ft.Page):
-        page.title = "Generated Page"
+        page.title = $title
         page.window_width = $width
         page.window_height = $height
         page.padding = 0
@@ -69,7 +73,8 @@ def main(page: ft.Page):
 ''';
   }
 
-  String _exportTestMain() {
+  String _exportTestMain(String pageFileName) {
+    final moduleName = pageFileName.replaceAll('.py', '');
     return '''
 import flet as ft
 
@@ -78,7 +83,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from flet_generated_page import main
+from $moduleName import main
 
 
 # 생성된 Flet 페이지를 바로 실행하는 테스트 main이다.
