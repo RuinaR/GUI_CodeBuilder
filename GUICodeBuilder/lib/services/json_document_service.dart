@@ -2,12 +2,12 @@ import 'dart:convert';
 
 import '../models/export_format.dart';
 import 'document_store.dart';
-import 'local_file_document_store.dart';
+import 'document_store_factory.dart';
 
 // JSON IR과 생성 코드를 파일로 저장하고 읽는다.
 class JsonDocumentService {
   JsonDocumentService({DocumentStore? documentStore})
-      : documentStore = documentStore ?? const LocalFileDocumentStore();
+      : documentStore = documentStore ?? createDefaultDocumentStore();
 
   final DocumentStore documentStore;
 

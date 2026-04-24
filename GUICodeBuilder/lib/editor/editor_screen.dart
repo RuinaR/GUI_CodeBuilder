@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -12,6 +10,7 @@ import '../models/editor_state.dart';
 import '../models/export_format.dart';
 import '../renderers/canvas_widget_renderer.dart';
 import '../services/json_document_service.dart';
+import '../services/platform_file_access.dart' as file_access;
 import 'canvas_area.dart';
 import 'property_panel.dart';
 import 'resize_handle.dart';
@@ -390,6 +389,17 @@ class _EditorScreenState extends State<EditorScreen> {
           ),
         );
     });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            file_access.supportsBrowserFilePicker
+                ? 'Export files downloaded.'
+                : 'Export files saved to exports.',
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _loadJsonText(String jsonText) async {
@@ -407,23 +417,7 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Future<String> _readDroppedJsonFile(List<String> paths) async {
-    if (paths.isEmpty) {
-      throw const FormatException('Drop a JSON file to load.');
-    }
-    final jsonFiles = paths.where((path) {
-      return path.toLowerCase().endsWith('.json');
-    }).toList();
-    if (jsonFiles.isEmpty) {
-      throw const FormatException('Only .json files can be loaded.');
-    }
-    if (jsonFiles.length > 1) {
-      throw const FormatException('Drop one JSON file at a time.');
-    }
-    final file = File(jsonFiles.single);
-    if (!file.existsSync()) {
-      throw const FileSystemException('JSON file does not exist.');
-    }
-    return file.readAsString();
+    return file_access.readDroppedJsonFile(paths);
   }
 
   void _showLoadJsonDialog() {
@@ -435,6 +429,7 @@ class _EditorScreenState extends State<EditorScreen> {
         var isLoading = false;
         String? errorText;
         String? loadedFileName;
+        var browserDropHandlerInstalled = false;
 
         Future<bool> loadText(
           String jsonText,
@@ -488,8 +483,7 @@ class _EditorScreenState extends State<EditorScreen> {
                 .where((path) => path.toLowerCase().endsWith('.json'))
                 .toList();
             final jsonText = await _readDroppedJsonFile(paths);
-            loadedFileName =
-                jsonFiles.single.split(Platform.pathSeparator).last;
+            loadedFileName = file_access.baseName(jsonFiles.single);
             controller.text = jsonText;
             final didLoad = await loadText(jsonText, setDialogState);
             if (didLoad) {
@@ -511,6 +505,24 @@ class _EditorScreenState extends State<EditorScreen> {
             _activeJsonDropHandler = (paths) {
               loadDroppedFiles(paths, setDialogState);
             };
+            if (file_access.supportsBrowserFilePicker &&
+                !browserDropHandlerInstalled) {
+              browserDropHandlerInstalled = true;
+              file_access.setBrowserJsonDropHandler(
+                (picked) async {
+                  setDialogState(() {
+                    isLoading = true;
+                    errorText = null;
+                    loadedFileName = picked.name;
+                    controller.text = picked.text;
+                  });
+                  await loadText(picked.text, setDialogState);
+                },
+                onDraggingChanged: (value) {
+                  setDialogState(() => isDragging = value);
+                },
+              );
+            }
             final borderColor = errorText != null
                 ? const Color(0xFFDC2626)
                 : isDragging
@@ -554,6 +566,53 @@ class _EditorScreenState extends State<EditorScreen> {
                         ],
                       ),
                     ),
+                    if (file_access.supportsBrowserFilePicker) ...[
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton(
+                          onPressed: isLoading
+                              ? null
+                              : () async {
+                                  setDialogState(() {
+                                    isLoading = true;
+                                    errorText = null;
+                                    loadedFileName = null;
+                                  });
+                                  try {
+                                    final picked =
+                                        await file_access.pickJsonFile();
+                                    if (picked == null) {
+                                      setDialogState(() {
+                                        isLoading = false;
+                                      });
+                                      return;
+                                    }
+                                    loadedFileName = picked.name;
+                                    controller.text = picked.text;
+                                    final didLoad = await loadText(
+                                      picked.text,
+                                      setDialogState,
+                                    );
+                                    if (didLoad) {
+                                      return;
+                                    }
+                                  } on FormatException catch (error) {
+                                    setDialogState(() {
+                                      errorText = error.message;
+                                      isLoading = false;
+                                    });
+                                  } on Exception catch (error) {
+                                    setDialogState(() {
+                                      errorText = error.toString();
+                                      isLoading = false;
+                                    });
+                                  }
+                                },
+                          child: const Text('Choose JSON File'),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     TextField(
                       controller: controller,
@@ -596,6 +655,7 @@ class _EditorScreenState extends State<EditorScreen> {
       },
     ).whenComplete(() {
       _activeJsonDropHandler = null;
+      file_access.setBrowserJsonDropHandler(null);
     });
   }
 
