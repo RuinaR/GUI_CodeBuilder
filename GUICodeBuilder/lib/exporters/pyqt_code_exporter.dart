@@ -18,7 +18,7 @@ class PyQtCodeExporter implements CodeExporter {
       'test_mains/run_pyqt_test.cmd': _exportRunPyQtTestCmd(),
       'requirements_export.txt': 'flet==0.82.2\nPyQt6==6.11.0\n',
       'tools/install_export_python_deps.cmd':
-          '@echo off\nsetlocal\nfor %%I in ("%~dp0..\\..") do set "ROOT=%%~fI\\"\npython -m pip install -r "%~dp0..\\requirements_export.txt"\nif not exist "%ROOT%.flutter-sdk\\flutter\\bin\\flutter.bat" (\n  where git >nul 2>nul\n  if errorlevel 1 (\n    echo Git is required to install Flutter SDK.\n    pause\n    exit /b 1\n  )\n  mkdir "%ROOT%.flutter-sdk" 2>nul\n  git clone -b stable https://github.com/flutter/flutter.git "%ROOT%.flutter-sdk\\flutter"\n)\n"%ROOT%.flutter-sdk\\flutter\\bin\\flutter.bat" --version\npause\n',
+          '@echo off\nsetlocal\nfor %%I in ("%~dp0..\\..") do set "ROOT=%%~fI\\"\npython -m pip install -r "%~dp0..\\requirements_export.txt"\nif errorlevel 1 (\n  echo Python dependency installation failed.\n  pause\n  exit /b 1\n)\nif exist "%ROOT%tools\\ensure_flutter_sdk.cmd" (\n  call "%ROOT%tools\\ensure_flutter_sdk.cmd"\n) else if not exist "%ROOT%.flutter-sdk\\flutter\\bin\\flutter.bat" (\n  where git >nul 2>nul\n  if errorlevel 1 (\n    echo Git is required to install Flutter SDK.\n    pause\n    exit /b 1\n  )\n  mkdir "%ROOT%.flutter-sdk" 2>nul\n  git clone --branch 3.41.7 --depth 1 https://github.com/flutter/flutter.git "%ROOT%.flutter-sdk\\flutter"\n)\nif errorlevel 1 (\n  echo Flutter SDK setup failed.\n  pause\n  exit /b 1\n)\necho Export dependencies are ready.\npause\n',
     };
   }
 

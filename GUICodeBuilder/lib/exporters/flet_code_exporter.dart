@@ -321,22 +321,34 @@ $space    value=${_formatNumber(value)},
 $space    min=${_formatNumber(min)},
 $space    max=${_formatNumber(max)},
 $space    width=${_formatNumber(node.width)},
+$space    padding=0,
 $space    on_change=self.${_eventHandlerName(node, 'on_change')},
 $space)''';
     }
+    final left = (node.width - node.height) / 2;
+    final top = (node.height - node.width) / 2;
     return '''ft.Container(
 $space    width=${_formatNumber(node.width)},
 $space    height=${_formatNumber(node.height)},
-$space    alignment=ft.Alignment(0, 0),
 $space    clip_behavior=ft.ClipBehavior.NONE,
-$space    content=ft.Slider(
-$space        value=${_formatNumber(value)},
-$space        min=${_formatNumber(min)},
-$space        max=${_formatNumber(max)},
-$space        width=${_formatNumber(node.height)},
-$space        height=${_formatNumber(node.width)},
-$space        on_change=self.${_eventHandlerName(node, 'on_change')},
-$space        rotate=ft.Rotate(angle=-1.5708, alignment=ft.Alignment(0, 0)),
+$space    content=ft.Stack(
+$space        width=${_formatNumber(node.width)},
+$space        height=${_formatNumber(node.height)},
+$space        clip_behavior=ft.ClipBehavior.NONE,
+$space        controls=[
+$space            ft.Slider(
+$space                value=${_formatNumber(value)},
+$space                min=${_formatNumber(min)},
+$space                max=${_formatNumber(max)},
+$space                width=${_formatNumber(node.height)},
+$space                height=${_formatNumber(node.width)},
+$space                left=${_formatNumber(left)},
+$space                top=${_formatNumber(top)},
+$space                padding=0,
+$space                on_change=self.${_eventHandlerName(node, 'on_change')},
+$space                rotate=ft.Rotate(angle=-1.5708, alignment=ft.Alignment(0, 0)),
+$space            ),
+$space        ],
 $space    ),
 $space)''';
   }

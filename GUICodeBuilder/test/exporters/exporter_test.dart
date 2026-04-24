@@ -55,8 +55,11 @@ void main() {
       expect(code, contains('min=0'));
       expect(code, contains('max=100'));
       expect(code, contains('width=260'));
-      expect(code, contains('alignment=ft.Alignment(0, 0)'));
       expect(code, contains('clip_behavior=ft.ClipBehavior.NONE'));
+      expect(code, contains('content=ft.Stack('));
+      expect(code, contains('left=-48'));
+      expect(code, contains('top=48'));
+      expect(code, contains('padding=0'));
       expect(
           code,
           contains(

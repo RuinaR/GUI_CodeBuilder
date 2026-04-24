@@ -7,6 +7,14 @@ set "LOCALAPPDATA=%ROOT%.dart-home\LocalAppData"
 set "PUB_CACHE=%ROOT%.dart-home\PubCache"
 set "FLUTTER_ROOT=%ROOT%.flutter-sdk\flutter"
 
+call "%~dp0ensure_flutter_sdk.cmd"
+if errorlevel 1 (
+  echo.
+  echo Flutter SDK setup failed.
+  pause
+  exit /b 1
+)
+
 if not exist "%APPDATA%" mkdir "%APPDATA%"
 if not exist "%LOCALAPPDATA%" mkdir "%LOCALAPPDATA%"
 if not exist "%PUB_CACHE%" mkdir "%PUB_CACHE%"

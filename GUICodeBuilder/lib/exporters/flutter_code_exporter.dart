@@ -122,6 +122,15 @@ set "LOCALAPPDATA=%ROOT%.dart-home\LocalAppData"
 set "PUB_CACHE=%ROOT%.dart-home\PubCache"
 set "FLUTTER_ROOT=%ROOT%.flutter-sdk\flutter"
 
+if exist "%ROOT%tools\ensure_flutter_sdk.cmd" (
+  call "%ROOT%tools\ensure_flutter_sdk.cmd"
+  if errorlevel 1 (
+    echo Flutter SDK setup failed.
+    pause
+    exit /b 1
+  )
+)
+
 if not exist "%ROOT%.dart_tool\package_config.json" (
   "%ROOT%.flutter-sdk\flutter\bin\cache\dart-sdk\bin\dart.exe" ^
     --packages="%ROOT%.flutter-sdk\flutter\packages\flutter_tools\.dart_tool\package_config.json" ^

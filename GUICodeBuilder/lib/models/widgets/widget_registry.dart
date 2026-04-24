@@ -46,8 +46,9 @@ final widgetDefinitions = <WidgetDefinition>[
 ];
 
 WidgetDefinition definitionFor(String typeId) {
+  final resolvedTypeId = typeId == 'text' ? 'label' : typeId;
   return widgetDefinitions.firstWhere(
-    (definition) => definition.typeId == typeId,
+    (definition) => definition.typeId == resolvedTypeId,
     orElse: () => widgetDefinitions.firstWhere(
       (definition) => definition.typeId == 'container',
     ),

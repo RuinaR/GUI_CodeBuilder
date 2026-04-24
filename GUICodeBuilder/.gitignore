@@ -3,6 +3,7 @@
 .dart-home/
 .flutter-sdk/
 build/
+windows/flutter/ephemeral/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
@@ -18,7 +19,9 @@ exports/
 
 # Python generated files
 __pycache__/
+**/__pycache__/
 *.py[cod]
+**/*.py[cod]
 .venv/
 venv/
 

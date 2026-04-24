@@ -3,7 +3,7 @@ import '../widget_definition_base.dart';
 class LabelDefinition extends WidgetDefinition {
   const LabelDefinition();
   @override
-  String get typeId => 'text';
+  String get typeId => 'label';
   @override
   String get label => 'Label';
   @override

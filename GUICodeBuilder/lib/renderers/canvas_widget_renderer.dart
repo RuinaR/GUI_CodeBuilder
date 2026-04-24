@@ -6,6 +6,7 @@ import '../models/widget_node.dart';
 class CanvasWidgetRenderer {
   Widget buildPreview(WidgetNode node) {
     switch (node.type) {
+      case 'label':
       case 'text':
         return _buildText(node);
       case 'button':

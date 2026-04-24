@@ -3,6 +3,7 @@ GUICodeBuilder/.dart_tool/
 GUICodeBuilder/.dart-home/
 GUICodeBuilder/.flutter-sdk/
 GUICodeBuilder/build/
+GUICodeBuilder/windows/flutter/ephemeral/
 GUICodeBuilder/exports/
 GUICodeBuilder/.flutter-plugins
 GUICodeBuilder/.flutter-plugins-dependencies
@@ -12,7 +13,9 @@ GUICodeBuilder/.idea/
 GUICodeBuilder/*.iml
 GUICodeBuilder/*.lnk
 GUICodeBuilder/__pycache__/
+GUICodeBuilder/**/__pycache__/
 GUICodeBuilder/*.py[cod]
+GUICodeBuilder/**/*.py[cod]
 GUICodeBuilder/.venv/
 GUICodeBuilder/venv/
 .DS_Store

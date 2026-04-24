@@ -187,7 +187,7 @@ class _DraggableNodeShellState extends State<_DraggableNodeShell> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned.fill(child: widget.renderer.buildPreview(widget.node)),
+          Positioned.fill(child: _buildPreview()),
           Positioned.fill(
             child: IgnorePointer(
               child: DecoratedBox(
@@ -242,6 +242,14 @@ class _DraggableNodeShellState extends State<_DraggableNodeShell> {
         ],
       ),
     );
+  }
+
+  Widget _buildPreview() {
+    final preview = widget.renderer.buildPreview(widget.node);
+    if (!widget.node.isSlider) {
+      return preview;
+    }
+    return IgnorePointer(child: preview);
   }
 
   Widget _buildGhostBox() {
