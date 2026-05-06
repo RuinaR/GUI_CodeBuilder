@@ -11,6 +11,10 @@
 
 [Open Web Demo](https://ruinar.github.io/GUI_CodeBuilder/)
 
+![Screenshot1](DocsImages/Screenshot1.png)
+
+![Screenshot2](DocsImages/Screenshot2.png)
+
 ## Features
 
 - 드래그 앤 드롭 기반 GUI 에디터
